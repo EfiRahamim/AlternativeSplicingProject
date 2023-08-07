@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 # Replace 'your_file.csv' with the actual path to your CSV file.
-csv_file_path = '/private5/Projects/Efi/lostfound_private5_rahamie4.csv'
+csv_file_path = "/private5/Projects/Efi/LostFounds_eidelman.csv"
 
 # Read the CSV file into a DataFrame.
 df = pd.read_csv(csv_file_path)
