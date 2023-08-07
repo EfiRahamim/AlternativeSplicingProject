@@ -52,7 +52,10 @@ def getNovelTranscript(novel_transcript_id):
       if feature == "exon" and transcript_found:
         chr, strand, exonStart, exonEnd = line_fields[0], line_fields[6],line_fields[3], line_fields[4]
         exon = getExon(chr, strand, exonStart, exonEnd, "NoGene", "NoAStype") # get the exon
-        novel_transcript_seq = novel_transcript_seq+exon # add the exon to the sequence
+        if strand == "+":
+            novel_transcript_seq = novel_transcript_seq+exon # positive strand: add the exon to the sequence, at the end
+        elif strand == "-":
+          novel_transcript_seq = exon+novel_transcript_seq # negative strand: add the exon to the sequence, at the beggining
         print(f"Adding exon: {exonStart}-{exonEnd}")
         continue
       if feature == "transcript" and transcript_found:
@@ -61,7 +64,7 @@ def getNovelTranscript(novel_transcript_id):
     return novel_transcript_seq
 
 gtf_file="/private10/Projects/Efi/AML/StringTie/Control_SF_Mutations/Control.gtf"
-novel_transcript_seq = getNovelTranscript("MSTRG.28.20")
+novel_transcript_seq = getNovelTranscript("ENST00000428771.6")
 print(novel_transcript_seq)
 
 
