@@ -113,7 +113,7 @@ def run_netmhc(fasta_file, netMHC_dir, type, spliced=False):
     try:
         output = subprocess.check_output(command, universal_newlines=True)
     except:
-        print("Error in running netmHC on subprocess. Exit.")
+        print("Error in running netMHC on subprocess. Exit.")
     # save the log of the proccess
     netMHC_log = os.path.join(netMHC_dir, "netMHC_Log.txt")
     with open (netMHC_log, 'w') as netMHClog:

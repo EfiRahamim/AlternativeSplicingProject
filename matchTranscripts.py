@@ -7,7 +7,7 @@ from Bio.Seq import Seq
 from Bio import SeqIO
 
 # CLI arguments
-parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="Matching optional transcripts for each Alternative Splicing event, based on the SE_to_isoform.py script of rMATS developers (took from GitHub: https://github.com/Xinglab/rmats-turbo/files/7237006/se_to_isoforms.zip). The matching transcripts will be added to the end of the table, in a new column.")
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="Matching optional transcripts for each Alternative Splicing event, based on the SE_to_isoform.py script of rMATS developers (took from GitHub: https://github.com/Xinglab/rmats-turbo/files/7237006/se_to_isoforms.zip). The matching transcripts will be added to the end of the table, in a new column. Detecting also novel transcripts. Conda environment ORFfinder must be activated!")
 parser.add_argument("-se", action='store', dest='SE_output', required=False, help="Input file: SE filtered csv file")
 parser.add_argument("-a5ss", action='store', dest='A5SS_output', required=False, help="Input file: A5SS filtered csv file")
 parser.add_argument("-a3ss", action='store', dest='A3SS_output', required=False, help="Input file: A3SS filtered csv file")

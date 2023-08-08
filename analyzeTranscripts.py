@@ -91,7 +91,7 @@ def getSeq(row, transcript, as_type):
       print("Creating the inclusion sequence according to the uptreamExon")
     #print("seq after inclusion: ", seq)
     #print("length of retained intron: ", len(row['RetainedIntronSeq']))
-  # make FASTA record for the seuence
+  # make FASTA record for the sequence
   fasta_str = StringIO(seq)
   # Parse the contents of the StringIO object as a FASTA file
   records = list(SeqIO.parse(fasta_str, "fasta"))
@@ -150,7 +150,7 @@ def getAminoAcidSeq(full_seq_record, spliced_seq):
     return None, None
   AA_spliced_seq = Seq(spliced_seq)
   try:
-    if not user_args.mulby3: # if spliced seq is not a multiple of 3 - short peptide can be formes
+    if not user_args.mulby3: # if spliced seq is not a multiple of 3 - short peptide can be formed
       AA_spliced_seq = AA_spliced_seq.translate(stop_symbol="")  
     else:
       AA_spliced_seq = AA_spliced_seq.translate(cds=True)
