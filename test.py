@@ -1,4 +1,6 @@
-import re, requests
+import re, requests, subprocess, os
+from io import StringIO
+from Bio import SeqIO
 
 server = "https://rest.ensembl.org"
 
@@ -47,13 +49,13 @@ def getNovelTranscript(novel_transcript_id):
       transcript_id = matche.group(1) # capture the transcript
       if feature == "transcript" and transcript_id == novel_transcript_id:
         transcript_found = True
-        print(f"Transcript {novel_transcript_id} was found in the GTF file")
+        print(f"Novel transcript {novel_transcript_id} was found in the GTF file")
         continue
       if feature == "exon" and transcript_found:
         chr, strand, exonStart, exonEnd = line_fields[0], line_fields[6],line_fields[3], line_fields[4]
         exon = getExon(chr, strand, exonStart, exonEnd, "NoGene", "NoAStype") # get the exon
         if strand == "+":
-            novel_transcript_seq = novel_transcript_seq+exon # positive strand: add the exon to the sequence, at the end
+          novel_transcript_seq = novel_transcript_seq+exon # positive strand: add the exon to the sequence, at the end
         elif strand == "-":
           novel_transcript_seq = exon+novel_transcript_seq # negative strand: add the exon to the sequence, at the beggining
         print(f"Adding exon: {exonStart}-{exonEnd}")
@@ -61,10 +63,46 @@ def getNovelTranscript(novel_transcript_id):
       if feature == "transcript" and transcript_found:
         print("Done creating sequence")
         break
-    return novel_transcript_seq
+  # check if any transcript was found
+  if not transcript_found:
+    print(f"Error in creating novel transcript sequence for transcript: {novel_transcript_id}. Skipping.")
+    return None
+  # save the transcript in a fasta file format 
+  novel_transcript_fasta = "> " + novel_transcript_id + "\n" + novel_transcript_seq
+  output_file = os.path.join(os.getcwd(), f'{novel_transcript_id}_transcript.fasta') 
+  with open(output_file, 'w') as fasta_file:
+    fasta_file.write(novel_transcript_fasta)
+  return output_file
 
+def findORF(novel_transcript_fasta):
+  # use the ORFfinder tool (installed via conda: /home/alu/rahamie4/anaconda3/envs/ORFfinder)
+  command = ["ORFfinder", "-in", novel_transcript_fasta, "-s", "0", "-n", "TRUE", "-outfmt", "1"]
+  try:
+    output = subprocess.check_output(command, universal_newlines=True)
+  except:
+    print("Error in running ORFfinder on subprocess. Exit.")
+    exit
+  ORFfinder_output = StringIO(output)
+  records = list(SeqIO.parse(ORFfinder_output, "fasta"))
+  print(records[0].seq)
+  print(checkORFStrand(records[0].id))
+
+def checkORFStrand(orf_fasta_id):
+  pattern = r":(\d+)-(\d+)$"
+  match = re.search(pattern, orf_fasta_id)
+  if match == None:
+    print(f"Error in retreving ORF position if ORF ID: {orf_fasta_id}")
+    return
+  start_pos = int(match.group(1))
+  end_pos = int(match.group(2))
+  if start_pos < end_pos:
+    return True
+  else:
+    return False
+  
 gtf_file="/private10/Projects/Efi/AML/StringTie/Control_SF_Mutations/Control.gtf"
-novel_transcript_seq = getNovelTranscript("ENST00000428771.6")
-print(novel_transcript_seq)
+novel_transcript_fasta_file = getNovelTranscript("ENST00000342066.7")
+print(novel_transcript_fasta_file)
+findORF(novel_transcript_fasta_file)
 
 
