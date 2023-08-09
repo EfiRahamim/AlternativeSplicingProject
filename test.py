@@ -2,8 +2,11 @@ import re, requests, subprocess, os
 from io import StringIO
 from Bio import SeqIO
 
-server = "https://rest.ensembl.org"
-
+# 1. read the GTF file and find the entry with the required transcript
+# 2. read the next entries specifing the exons of the required transcript and achieve each exon sequence by using the getExon function.
+# 3. concatenate all the exons into one sequence
+# 4. define the possible ORF's in the sequence
+# 5. Maybe: Choose the longest ORF as the most possible sequence
 def getExon(chr, strand_sign, exonStart, exonEnd, geneID, as_type):
   # define strand as 1/-1
   if strand_sign == '+':
@@ -26,12 +29,7 @@ def getExon(chr, strand_sign, exonStart, exonEnd, geneID, as_type):
   return exon
 
 # function to get the sequence of a novel transcript using the GTF file
-def getNovelTranscript(novel_transcript_id):
-  # 1. read the GTF file and find the entry with the required transcript
-  # 2. read the next entries specifing the exons of the required transcript and achieve each exon sequence by using the getExon function.
-  # 3. concatenate all the exons into one sequence
-  # 4. define the possible ORF's in the sequence
-  # 5. Maybe: Choose the longest ORF as the most possible sequence
+def getNovelTranscriptFasta(novel_transcript_id):
   with open(gtf_file, 'r') as gtf:
     transcript_found = False
     novel_transcript_seq = ""
@@ -44,7 +42,7 @@ def getNovelTranscript(novel_transcript_id):
       transcript_id_pattern = r"transcript_id \"(\w+\.\d+\.*\d*)\"" # regex to capture the transcript_id within the attributes
       matche = re.search(transcript_id_pattern, attributes) # search for transcript_id string in the attributes
       if matche == None:
-        print(f"Error in capturing transcript_id attribute in attributes {attributes}")
+        print(f"Error in capturing transcript_id attribute in {attributes}")
         continue
       transcript_id = matche.group(1) # capture the transcript
       if feature == "transcript" and transcript_id == novel_transcript_id:
@@ -61,48 +59,83 @@ def getNovelTranscript(novel_transcript_id):
         print(f"Adding exon: {exonStart}-{exonEnd}")
         continue
       if feature == "transcript" and transcript_found:
-        print("Done creating sequence")
+        print(f"Done creating sequence of novel transcript {novel_transcript_id}")
         break
   # check if any transcript was found
   if not transcript_found:
-    print(f"Error in creating novel transcript sequence for transcript: {novel_transcript_id}. Skipping.")
     return None
   # save the transcript in a fasta file format 
+  if not os.path.isdir(os.path.join(os.getcwd(), "NovelTranscrips")):
+    os.mkdir(os.path.join(os.getcwd(), "NovelTranscrips"))
   novel_transcript_fasta = "> " + novel_transcript_id + "\n" + novel_transcript_seq
-  output_file = os.path.join(os.getcwd(), f'{novel_transcript_id}_transcript.fasta') 
+  output_file = os.path.join(os.getcwd(),"NovelTranscrips", f'{novel_transcript_id}_transcript.fasta')
+  print(f"Writing temporary FASTA file of novel transcript to: {output_file}. File will be deleted after checking.") 
   with open(output_file, 'w') as fasta_file:
     fasta_file.write(novel_transcript_fasta)
   return output_file
 
+# function to find the most possible ORF of the novel transcript
 def findORF(novel_transcript_fasta):
   # use the ORFfinder tool (installed via conda: /home/alu/rahamie4/anaconda3/envs/ORFfinder)
-  command = ["ORFfinder", "-in", novel_transcript_fasta, "-s", "0", "-n", "TRUE", "-outfmt", "1"]
+  command = ["ORFfinder", "-in", novel_transcript_fasta, "-s", "0", "-n", "TRUE","-outfmt", "1"]
   try:
     output = subprocess.check_output(command, universal_newlines=True)
   except:
     print("Error in running ORFfinder on subprocess. Exit.")
     exit
+  # parse the output of ORFfinder into FAST file
   ORFfinder_output = StringIO(output)
   records = list(SeqIO.parse(ORFfinder_output, "fasta"))
-  print(records[0].seq)
-  print(checkORFStrand(records[0].id))
+  # find the longest ORF
+  ORF_lengths = [len(record.seq) for record in records]
+  longest_ORF_index = ORF_lengths.index(max(ORF_lengths))
+  longest_ORF_record = records[longest_ORF_index]
+  # check if most possible ORF is on the positive strand (more accurate) or on the negative strand (less accurate and need to be checked)
+  onPositiveStrand = checkORFStrand(longest_ORF_record.id) 
+  if onPositiveStrand == None:
+    return None
+  if not onPositiveStrand:
+    print("Most possible ORF that has been found is not on the positive strand.")
+    return None
+  # return the sequence of the most possible ORF in the given novel transcript sequence
+  return longest_ORF_record.seq
 
+# function to check the strand of the ORF
 def checkORFStrand(orf_fasta_id):
   pattern = r":(\d+)-(\d+)$"
   match = re.search(pattern, orf_fasta_id)
   if match == None:
-    print(f"Error in retreving ORF position if ORF ID: {orf_fasta_id}")
-    return
+    print(f"Error in retreving ORF position of ORF ID: {orf_fasta_id}")
+    return None
   start_pos = int(match.group(1))
   end_pos = int(match.group(2))
   if start_pos < end_pos:
     return True
   else:
     return False
-  
+
+# function to handle case of novel transcript  
+def HandleNovelTranscriptCase(novel_transcript_id):
+  # get fasta file of the novel transcript
+  novel_transcript_file = getNovelTranscriptFasta(novel_transcript_id)
+  if novel_transcript_file ==  None:
+    print(f"Error in creating novel transcript sequence for transcript: {novel_transcript_id}. Skipping.")
+    return
+  # find the most possible ORF
+  novel_transcript_ORF = findORF(novel_transcript_file)
+  # remove FASTA file of novel transcript
+  #os.remove(novel_transcript_file)
+  # check the returned ORF 
+  if novel_transcript_ORF == None:
+    return None
+  # return the ORF of the novel transcript
+  return novel_transcript_ORF
+
+
+
+server = "https://rest.ensembl.org"
 gtf_file="/private10/Projects/Efi/AML/StringTie/Control_SF_Mutations/Control.gtf"
-novel_transcript_fasta_file = getNovelTranscript("ENST00000342066.7")
-print(novel_transcript_fasta_file)
-findORF(novel_transcript_fasta_file)
+print(HandleNovelTranscriptCase("ENST00000361445.8"))
+
 
 
