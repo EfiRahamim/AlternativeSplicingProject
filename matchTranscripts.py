@@ -1,7 +1,8 @@
 import argparse
 import csv
 import subprocess, multiprocessing
-import requests, sys
+import requests
+import re
 from io import StringIO
 from Bio.Seq import Seq
 from Bio import SeqIO
@@ -13,7 +14,7 @@ parser.add_argument("-a5ss", action='store', dest='A5SS_output', required=False,
 parser.add_argument("-a3ss", action='store', dest='A3SS_output', required=False, help="Input file: A3SS filtered csv file")
 parser.add_argument("-mxe", action='store', dest='MXE_output', required=False, help="Input file: MXE filtered csv file")
 parser.add_argument("-ri", action='store', dest='RI_output', required=False, help="Input file: RI filtered csv file")
-parser.add_argument('-gtf', action='store', dest='gtf', help="GTF file that was used for running STAR and rMATS")
+parser.add_argument('-gtf', action='store', dest='gtf', help="GTF file that was used for running STAR and rMATS. If detecting novel transcript, GTF should contain novel transcripts as well (can be obtained from StringTie)")
 parser.add_argument('-script', action='store', dest='script', default="/private5/Projects/Efi/AS/rmats-turbo/se_to_isoforms.py", help='The \'SE_to_isoform.py\' script')
 #SE_output = "/private5/Projects/Efi/AS/TCGA-BRCA/gencode_v36/significant_results/SE/SE_filtered.csv"
 #gtf = "/private5/Projects/Efi/AS/gencode.v36.annotation.gtf"
@@ -34,7 +35,10 @@ def run_gtf_to_transcript(chr, strand, exonStart_0base, exonEnd, upstreamES, ups
     # split output of command to transcripts ID's
     for line in output.strip().split('\n'):
         if line.startswith("transcript_id"):
-            transcript_id = line.split(":")[1].strip()[1:-10]
+            # find the transcript_id using regex
+            transcript_pattern = r"transcript_id: \"(\w+\.\d+\.*\d*)\","
+            matche = re.search(transcript_pattern, line)
+            transcript_id = matche.group(1)
             transcripts.append(transcript_id)
     return transcripts
 
