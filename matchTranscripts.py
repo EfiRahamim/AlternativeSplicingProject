@@ -24,7 +24,7 @@ user_args = parser.parse_args()
 server = "https://rest.ensembl.org"
 
 # Function to run the gtf_to_transcript.py script and parse the output
-def run_gtf_to_transcript(chr, strand, exonStart_0base, exonEnd, upstreamES, upstreamEE, downstreamES, downstreamEE):
+def run_rmats_to_transcript(chr, strand, exonStart_0base, exonEnd, upstreamES, upstreamEE, downstreamES, downstreamEE):
     # create the shell command
     command = ["python", user_args.script , "--chr", str(chr), "--strand", strand, "--exon-start", str(exonStart_0base),
                "--exon-end", str(exonEnd), "--upstream-start", str(upstreamES), "--upstream-end", str(upstreamEE),
@@ -70,10 +70,17 @@ def findMatchingTranscripts(row, transcripts, exon, as_type):
   matching_transcripts = []
   # run over each transcript
   for transcript in transcripts:
-    # create and run URL 
+    # check if transcript is annotated or novel
+    if not transcript.startswith("ENST"):
+      # novel transcript : validation for novel transcript and exon will be prefomed later in the analysis. For now, just add the novel trancript ID as a matching transcript
+      print(f"Novel transcript was found: {transcript}. Will be added as a matching transcript, by default.")
+      matching_transcripts.append(transcript)
+      found = True
+      continue
+    # annotated transcript: create and run URL for retreving the sequence
     transcript = transcript.replace(".","/.")
     ext_transcript = f"/sequence/id/{transcript}?type=cds"
-    print(f"Transcript sequence request: {server+ext_transcript}")
+    print(f"Annotated transcript sequence request: {server+ext_transcript}")
     r_t = requests.get(server+ext_transcript, headers={ "Content-Type" : "text/x-fasta"})
     if not r_t.ok:
       #r_t.raise_for_status()
@@ -86,7 +93,7 @@ def findMatchingTranscripts(row, transcripts, exon, as_type):
     if exon != None and exon in records[0].seq:
       found = True
       transcript = transcript.replace("/.",".")
-      print(f"Gene: {row['GeneID']} Matched transcript: {transcript}")
+      print(f"Gene: {row['GeneID']} Matched annotated transcript: {transcript}")
       matching_transcripts.append(transcript)
       #break
       #return r_t.text, records[0], transcript
@@ -151,15 +158,15 @@ def run_one_row(row, as_type):
   # define command arguments
   chr, strand, exonStart_0base, exonEnd, upstreamES, upstreamEE, downstreamES, downstreamEE = get_command_args(row, as_type)
   # run command and fine transcripts
-  transcripts = run_gtf_to_transcript(chr, strand, exonStart_0base, exonEnd, upstreamES, upstreamEE, downstreamES, downstreamEE)
+  transcripts = run_rmats_to_transcript(chr, strand, exonStart_0base, exonEnd, upstreamES, upstreamEE, downstreamES, downstreamEE)
   print(f"Optional transcripts: {transcripts}.")
   # find matching transcript according to the AS type
   if as_type in ['SE', 'A5SS', 'A3SS']:
     exonStart, exonEnd = define_exon_coordinates(row, as_type)
     exon_seq = getExon(row['chr'], row['strand'], exonStart, exonEnd, row['GeneID'], as_type)
     row['AlternativeExonSeq'] = exon_seq
-    print(f"Looking for matching transcripts for GeneID {row['GeneID']} in {as_type} type.") 
-    matching_transcripts = findMatchingTranscripts(row, transcripts, exon_seq, as_type)
+    #print(f"Looking for matching transcripts for GeneID {row['GeneID']} in {as_type} type.") 
+    #matching_transcripts = findMatchingTranscripts(row, transcripts, exon_seq, as_type)
   elif as_type == 'RI':
     exonStart1, exonEnd1 = define_exon_coordinates(row, as_type, ri_second_exon=False)
     exonStart2, exonEnd2 = define_exon_coordinates(row,as_type, ri_second_exon=True)
@@ -167,10 +174,10 @@ def run_one_row(row, as_type):
     exon2_seq = getExon(row['chr'], row['strand'], exonStart2, exonEnd2, row['GeneID'], as_type)
     retained_intron = getExon(row['chr'], row['strand'], row['upstreamEE_1base'], row['downstreamES'], row['GeneID'], as_type)
     row['upstreamExonSeq'], row['downstreamExonSeq'], row['RetainedIntronSeq'] = exon1_seq, exon2_seq, retained_intron
-    print(f"Looking for matching transcripts for GeneID {row['GeneID']} in {as_type} type.")
-    optional_transcripts1 = findMatchingTranscripts(row, transcripts, exon1_seq, as_type)
-    optional_transcripts2 = findMatchingTranscripts(row, transcripts, exon2_seq, as_type)
-    matching_transcripts = list(set(optional_transcripts1).intersection(optional_transcripts2))
+    #print(f"Looking for matching transcripts for GeneID {row['GeneID']} in {as_type} type.")
+    #optional_transcripts1 = findMatchingTranscripts(row, transcripts, exon1_seq, as_type)
+    #optional_transcripts2 = findMatchingTranscripts(row, transcripts, exon2_seq, as_type)
+    #matching_transcripts = list(set(optional_transcripts1).intersection(optional_transcripts2))
   elif as_type == 'MXE':
     exonStart1, exonEnd1 = define_exon_coordinates(row, as_type, mxe_second_exon=False)
     exonStart2, exonEnd2 = define_exon_coordinates(row,as_type, mxe_second_exon=True)
@@ -178,24 +185,26 @@ def run_one_row(row, as_type):
     exon2_seq = getExon(row['chr'], row['strand'], exonStart2, exonEnd2, row['GeneID'], as_type)
     row['AlternativeExonSeq1'] = exon1_seq
     row['AlternativeExonSeq2'] = exon2_seq
-    print(f"Looking for matching transcripts for GeneID {row['GeneID']} in {as_type} type.")
-    optional_transcripts1 = findMatchingTranscripts(row, transcripts, exon1_seq, as_type)
-    optional_transcripts2 = findMatchingTranscripts(row, transcripts, exon2_seq, as_type)
-    uniqe_matching_transcripts = list(set(optional_transcripts1).symmetric_difference(optional_transcripts2))
-    both_exon_transcripts = list(set(optional_transcripts1).intersection(optional_transcripts2))
-    matching_transcripts_group1 = [transcript for transcript in uniqe_matching_transcripts if transcript in optional_transcripts1]
-    matching_transcripts_group2 = [transcript for transcript in uniqe_matching_transcripts if transcript in optional_transcripts2]
-    print(f"Transcripts mathcing both exons: {both_exon_transcripts}")
-    print(f"Unique transcripts: {uniqe_matching_transcripts}")
-    print(f"Transcript for first exon: {matching_transcripts_group1}")
-    print(f"Transcript for second exon: {matching_transcripts_group2}")
-    if len(matching_transcripts_group1) == 0 or len(matching_transcripts_group2) == 0:
-      print("No matching transcript for exon1 or exon2. Returning transcripts that contain both exons.")
-      matching_transcripts = both_exon_transcripts
-    else:
-      matching_transcripts = uniqe_matching_transcripts
-  row['optional transcripts'] = ';'.join(matching_transcripts)
-  print(f"Matching transcripts: {matching_transcripts}")
+    # print(f"Looking for matching transcripts for GeneID {row['GeneID']} in {as_type} type.")
+    # optional_transcripts1 = findMatchingTranscripts(row, transcripts, exon1_seq, as_type)
+    # optional_transcripts2 = findMatchingTranscripts(row, transcripts, exon2_seq, as_type)
+    # uniqe_matching_transcripts = list(set(optional_transcripts1).symmetric_difference(optional_transcripts2))
+    # both_exon_transcripts = list(set(optional_transcripts1).intersection(optional_transcripts2))
+    # matching_transcripts_group1 = [transcript for transcript in uniqe_matching_transcripts if transcript in optional_transcripts1]
+    # matching_transcripts_group2 = [transcript for transcript in uniqe_matching_transcripts if transcript in optional_transcripts2]
+    # print(f"Transcripts mathcing both exons: {both_exon_transcripts}")
+    # print(f"Unique transcripts: {uniqe_matching_transcripts}")
+    # print(f"Transcript for first exon: {matching_transcripts_group1}")
+    # print(f"Transcript for second exon: {matching_transcripts_group2}")
+    # if len(matching_transcripts_group1) == 0 or len(matching_transcripts_group2) == 0:
+    #   print("No matching transcript for exon1 or exon2. Returning transcripts that contain both exons.")
+    #   matching_transcripts = both_exon_transcripts
+    # else:
+      # matching_transcripts = uniqe_matching_transcripts
+  #row['optional transcripts'] = ';'.join(matching_transcripts)
+  #print(f"Matching transcripts: {matching_transcripts}")
+  row['optional transcripts'] = ';'.join(transcripts)
+  print(f"Optional transcripts: {transcripts}")
   return row
 
 def run_analyse(rmats_output_file, as_type):
