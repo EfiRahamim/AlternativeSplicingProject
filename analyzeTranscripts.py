@@ -5,7 +5,7 @@ from io import StringIO
 from Bio.Seq import Seq
 
 # CLI arguments
-parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="Analyzing transcripts of rMATS results: Creating full and spliced nucleic and amino acids sequences for each transcript. Results will be saved in the giving output directory.\nNOTE: NOT SUITABLE FOR MXE EVENTS (YET)!!!")
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="Analyzing transcripts of rMATS results: Creates the inclusion and exclusion nucleic and amino acids sequences for each transcript. Results will be saved in the giving output directory.\nNOTE: Must activate 'ORFfinder' conda environment!!")
 parser.add_argument("-i", action='store', dest='input', required=True, help="Input file: rMATS filtered csv file")
 parser.add_argument("-type", action='store', dest='as_type', required=True, help="Type of Splicing Event - SE/A5SS/A3SS/MXE/RI.", choices=["SE","A3SS","A5SS","MXE","RI"])
 parser.add_argument("-gtf", action='store', dest='gtf', required=True, help="GTF file for handeling novel transcripts. Should be GTF file from StringTie output.")
@@ -14,8 +14,8 @@ parser.add_argument("-gtf", action='store', dest='gtf', required=True, help="GTF
 # parser.add_argument("-mxe", action='store', dest='MXE_output', required=False, help="Input file: MXE filtered csv file")
 # parser.add_argument("-ri", action='store', dest='RI_output', required=False, help="Input file: RI filtered csv file")
 parser.add_argument('-o', action='store', dest='output_dir', default=os.getcwd(), help="Output directory")
-parser.add_argument('-l1', action='store', dest='label1', help="Lable of first group in the analyze (e.g. Normal)")
-parser.add_argument('-l2', action='store', dest='label2', help="Lable of second group in the analyze (e.g. Tumor)")
+parser.add_argument('-l1', action='store', dest='label1', required=True, help="Lable of first group in the analyze (e.g. Normal)")
+parser.add_argument('-l2', action='store', dest='label2', required=True, help="Lable of second group in the analyze (e.g. Tumor)")
 parser.add_argument('--mulby3', action='store_true', dest='mulby3', help='If set - filterring out spliced transcripts that were not multipule of 3.')
 user_args = parser.parse_args()
 
@@ -202,7 +202,7 @@ def getNovelTranscriptFasta(novel_transcript_id):
         continue
       if feature == "exon" and transcript_found:
         chr, strand, exonStart, exonEnd = line_fields[0], line_fields[6],line_fields[3], line_fields[4]
-        exon = getExon(chr, strand, exonStart, exonEnd, "NoGene", "NoAStype") # get the exon
+        exon = getExonByRegions(chr, strand, exonStart, exonEnd) # get the exon
         if strand == "+":
           novel_transcript_seq = novel_transcript_seq+exon # positive strand: add the exon to the sequence, at the end
         elif strand == "-":
@@ -216,10 +216,10 @@ def getNovelTranscriptFasta(novel_transcript_id):
   if not transcript_found:
     return None
   # save the transcript in a fasta file format 
-  if not os.path.isdir(os.path.join(os.getcwd(), "NovelTranscrips")):
-    os.mkdir(os.path.join(os.getcwd(), "NovelTranscrips"))
+  if not os.path.isdir(os.path.join(os.getcwd(), "NovelTranscripts")):
+    os.mkdir(os.path.join(os.getcwd(), "NovelTranscripts"))
   novel_transcript_fasta = "> " + novel_transcript_id + "\n" + novel_transcript_seq
-  output_file = os.path.join(os.getcwd(),"NovelTranscrips", f'{novel_transcript_id}_transcript.fasta')
+  output_file = os.path.join(os.getcwd(),"NovelTranscripts", f'{novel_transcript_id}_transcript.fasta')
   print(f"Writing temporary FASTA file of novel transcript to: {output_file}. File will be deleted after checking.") 
   with open(output_file, 'w') as fasta_file:
     fasta_file.write(novel_transcript_fasta)
@@ -249,7 +249,7 @@ def findORF(novel_transcript_fasta):
     print("Most possible ORF that has been found is not on the positive strand.")
     return None
   # return the sequence of the most possible ORF in the given novel transcript sequence
-  return longest_ORF_record.seq
+  return str(longest_ORF_record.seq)
 
 # function to check the strand of the ORF
 def checkORFStrand(orf_fasta_id):
@@ -298,7 +298,7 @@ def HandleAnnotatedTranscriptCase(annotated_transcript_id):
   # Parse the contents of the StringIO object as a FASTA file
   records = list(SeqIO.parse(fasta_str, "fasta"))
   # return the annotated transcript sequence
-  return records[0].seq
+  return str(records[0].seq)
 
 # function to create the inclusion sequence from the transcript
 def getInclusionExclusionSeq(transcript_seq, row, as_type, transcript_id):
@@ -334,7 +334,7 @@ def getInclusionExclusionSeq(transcript_seq, row, as_type, transcript_id):
       matche = re.search(up_and_down_seq_pattern,transcript_seq)
       if matche == None:
         print(f"Error in finding upstream and downstream exons in transcript: {transcript_id}, Gene: {row['GeneID']}, AS Type: {as_type}")
-        return None
+        return None, None
       up_and_down_seq = matche.group(0)
       if as_type == 'MXE':
         # MXE type in forward strand: the inclusion form includes the 1st exon and skips the 2nd exon
@@ -415,7 +415,7 @@ def run_one_row(row):
           f.write(transcript + '\n')
         continue
       # create the full and spliced sequenced from the transcript
-      inclusion_seq, exclusion_seq = getInclusionExclusionSeq(transcript_seq, row, user_args.as_type)
+      inclusion_seq, exclusion_seq = getInclusionExclusionSeq(transcript_seq, row, user_args.as_type, transcript_id=transcript)
       if inclusion_seq == None or exclusion_seq == None:
         print(f"Error in getting inclusion and/or exclusion sequences. Skipping.")
         with open('NoInclusionExclusionSeq.txt', 'a') as f:
@@ -488,7 +488,7 @@ def run_analyse(input_file):
   with open(input_file, 'r') as csvfile:
     reader = csv.DictReader(csvfile)
     rows = list(reader)
-  pool = multiprocessing.Pool(processes=10) 
+  pool = multiprocessing.Pool(processes=1) 
   pool.map(run_one_row,rows)
   pool.close()
   pool.join()
