@@ -1,0 +1,18 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["-i", "/private10/Projects/Efi/AML/test/SE_filtered_small.csv", 
+            "-type", "SE", "-gtf", "/private10/Projects/Efi/AML/StringTie/Control_SF_Mutations/Control.gtf", "-o", "/private10/Projects/Efi/AML/test/SE_AnalyzeTranscript/", "-l1", "Control", "-l2", "Treatment"]
+        }
+    ]
+}
