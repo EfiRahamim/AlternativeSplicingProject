@@ -4,7 +4,7 @@ library(argparse)
 parser <- ArgumentParser(description='Filter rMATS initial results.\n The filter is according to: P_value, FDR, TransMembrane Genes and IncLevelDifference value')
 parser$add_argument("-i", action="store", dest="input", help="rMATS result file ({SE/A5SS/A3SS/MXE/RI}.MATS.JC.txt)")
 parser$add_argument("-o", action="store", dest="output", help="Output directory to write the filtered table. Default: working directory.", default = getwd() )
-parser$add_argument("-type", action="store", dest="type", help="Type os Splicing Event - SE/A5SS/A3SS/MXE/RI.", choices=c("SE","A3SS","A5SS","MXE","RI"))
+parser$add_argument("-type", action="store", dest="type", help="Type of Splicing Event - SE/A5SS/A3SS/MXE/RI.", choices=c("SE","A3SS","A5SS","MXE","RI"))
 parser$add_argument("--filter_by_TM", action="store_true", dest="filter_tm", help="Filter results by Trans-Membrane (TM) proteins")
 parser$add_argument("-tm", action="store", dest="tm", help="Path of TransMembrane Domains table (UniProt). Defualt: /private5/Projects/Efi/AS/transmembrane_May23.csv", default="/private5/Projects/Efi/AS/transmembrane_May23.csv")
 parser$add_argument("-pvalue", action="store", dest="pvalue", help="P-Value threshold. Defualt: 0.05", type="double", default=0.05)
@@ -58,11 +58,7 @@ if (user_args$type == "SE"){
 #print(paste0("Filtering by exon length: ", nrow(filtered_SE_significant), " results."))
 filtered_SE_significant <- filtered_SE
 # write results as csv table
-if (user_args$filter_tm){
-    output_file_path = paste0(user_args$output,"/",user_args$type,"_filtered_TM.csv")
-} else{
-    output_file_path = paste0(user_args$output,"/",user_args$type,"_filtered.csv")    
-}
+output_file_path = paste0(user_args$output,"/",user_args$type,"_filtered.csv")
 write.csv(filtered_SE_significant, output_file_path, row.names=FALSE)
 
 
