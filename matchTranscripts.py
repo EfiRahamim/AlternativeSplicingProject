@@ -59,7 +59,7 @@ def getExon(chr, strand_sign, exonStart, exonEnd, geneID, as_type):
     print(f"Error in getting exon by regions. Skipping.")
     with open (f"NoExon_{as_type}.txt", 'a') as f:
       f.write(geneID + '\n')
-    return None
+    return "N/A"
   exon = r_r.text.upper()
   return exon
 
@@ -211,7 +211,7 @@ def run_analyse(rmats_output_file, as_type):
   rows = file_to_list(rmats_output_file) # read the file
   #print(rows)
   print(f"---------------------------------Start Proccesing {as_type}---------------------------------")
-  pool = multiprocessing.Pool(processes=10) 
+  pool = multiprocessing.Pool(processes=1) 
   rows_update = pool.starmap(run_one_row,[(row,as_type) for row in rows])
   pool.close()
   pool.join()
