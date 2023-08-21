@@ -362,6 +362,12 @@ def getInclusionExclusionSeq(transcript_seq, row, as_type, transcript_id):
         exclusion_seq = transcript_seq.replace(up_and_down_seq, downstream_seq+upstream_seq)
   elif as_type in ['A5SS', 'A3SS']:
     # A5SS/A3SS cases: all sequences are designed as positive
+    up_and_down_seq_pattern = fr"({upstream_seq}.*{downstream_seq})"
+    matche = re.search(up_and_down_seq_pattern,transcript_seq)
+    if matche == None:
+      print(f"Error in finding upstream and downstream exons in transcript: {transcript_id}, Gene: {row['GeneID']}, AS Type: {as_type}")
+      return None, None
+    up_and_down_seq = matche.group(0)
     inclusion_seq = transcript_seq.replace(up_and_down_seq, upstream_seq+alternative_exon_seq+downstream_seq)
     exclusion_seq = transcript_seq.replace(up_and_down_seq, upstream_seq+downstream_seq)
   
@@ -488,7 +494,7 @@ def run_analyse(input_file):
   with open(input_file, 'r') as csvfile:
     reader = csv.DictReader(csvfile)
     rows = list(reader)
-  pool = multiprocessing.Pool(processes=1) 
+  pool = multiprocessing.Pool(processes=10) 
   pool.map(run_one_row,rows)
   pool.close()
   pool.join()
