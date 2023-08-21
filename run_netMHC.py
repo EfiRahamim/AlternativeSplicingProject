@@ -1,10 +1,10 @@
 import sys, os, glob, multiprocessing, argparse, subprocess, re, csv
 
 # CLI arguments
-parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="Running netMHC on full & spliced sequences of each transcript. Results will be saved in the directory of each transcript from the giving output directory. Using the 'netMHC' tool located in: /private/common/Software/netMHC-4.0/Linux_x86_64/bin/netMHC. HLA allels that are being used for this analysis: HLA-A0101,HLA-A0201,HLA-A0301,HLA-A2402,HLA-A2601,HLA-B0702,HLA-B0801,HLA-B1501,HLA-B2705,HLA-B3901,HLA-B4001,HLA-B5801")
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="Running netMHC on inclusion & exclusion sequences of each transcript. Results will be saved in the directory of each transcript from the giving output directory. Using the 'netMHC' tool located in: /private/common/Software/netMHC-4.0/Linux_x86_64/bin/netMHC. HLA allels that are being used for this analysis: HLA-A0101,HLA-A0201,HLA-A0301,HLA-A2402,HLA-A2601,HLA-B0702,HLA-B0801,HLA-B1501,HLA-B2705,HLA-B3901,HLA-B4001,HLA-B5801. The output of this script is the amount of strong binders that were found in each HLA allel for each group.")
 parser.add_argument("-i", action='store', dest='input_dir', required=True, help="Input directory of genes directories")
-parser.add_argument("-l1", action='store', dest='lable1', required=True, help="Lable of first group (same order as in the rMATS analysis). This group should be the control group (e.g Normal/Mock)")
-parser.add_argument("-l2", action='store', dest='lable2', required=True, help="Lable of second group (same order as in the rMATS analysis).  This group should be the control group (e.g Tumor/Treatment)")
+parser.add_argument("-l1", action='store', dest='lable1', required=True, help="Lable of first group (same order as in the rMATS analysis).")
+parser.add_argument("-l2", action='store', dest='lable2', required=True, help="Lable of second group (same order as in the rMATS analysis).")
 user_args = parser.parse_args()
 
 
@@ -28,15 +28,15 @@ def get_absolute_file_paths(directory):
             file_paths.append(file_path)
     return file_paths
 
-# define the type of the full and spliced sequences - control or case
-def getGroups(fullSeq_file):
-    groups={"full":"", "spliced":""}
-    if user_args.lable1 in fullSeq_file:
-        groups['full'] = user_args.lable1
-        groups['spliced']=user_args.lable2
-    elif user_args.lable2 in fullSeq_file:
-        groups['full'] = user_args.lable2
-        groups['spliced']=user_args.lable1
+# define the type of the inclusion and exclusion sequences - control or case
+def getGroupsForms(group1Seq_file):
+    groups={"1":"", "2":""}
+    if "inclusion" in group1Seq_file:
+        groups['1'] = "inclusion"
+        groups['2'] = "exclusion"
+    elif "exclusion" in group1Seq_file:
+        groups['1'] = "exclusion"
+        groups['2'] = "inclusion"
     else:
         groups=None
     return groups
@@ -60,10 +60,10 @@ def get_HLA_strongBinders(netMHC_output,hla_type):
         print(f"Error in getting 'Strong Binders' value from {hla_type}. Setting to (-1).")
         return -1
  
-def get_GeneSynbol_transcriptID(path):
+def get_GeneSymbol_transcriptID(path):
     # this function gets a path and extract the Gene Symbol and TranscriptID from it
     # define regex
-    pattern = r"/(\w+\.\d+_(\w+-*\w+.*\w+))/(\d+)/(\w+\.\d+)/*$"
+    pattern = r"/(\w+\.\d+\.*\d*\.*\d*_(\w+-*\w+.*\w+))/(\d+)/(\w+\.\d+\.*\d*\.*\d*)/*$"
     # capture the occurances
     match = re.search(pattern, path)
     if match:
@@ -71,6 +71,7 @@ def get_GeneSynbol_transcriptID(path):
         transcriptID = match.group(4)
         return geneSymbol, transcriptID
     else:
+        print(f"Error in finding GeneSymbol and TranscriptID in path {path}")
         return None, None
 
 # calculate the difference of SB values of each HLA allele between the two dictionaries
@@ -88,12 +89,12 @@ def calculate_SB_difference(sb_dict_1, sb_dict_2):
     return sb_difference_dict
 
 # run the netMHC command
-def run_netmhc(fasta_file, netMHC_dir, type, spliced=False):
+def run_netmhc(fasta_file, netMHC_dir, form, group):
     # create file name for netMHC output
-    if spliced:
-        output_file = f"netMHC_splicedAA_{type}.xls"
-    else:
-        output_file = f"netMHC_fullAA_{type}.xls"
+    if form == "exclusion":
+        output_file = f"netMHC_exclusionAA_{group}.xls"
+    elif form == "inclusion":
+        output_file = f"netMHC_inclusionAA_{group}.xls"
     # create output file path
     output_path = os.path.join(netMHC_dir,output_file)
     # create shell command for netMHC
@@ -134,21 +135,32 @@ def save_results_to_csv(list_of_dicts, output_dir, filename):
         writer.writeheader()
         writer.writerows(list_of_dicts)
 
-def get_difference_dict_from_exist_file(file_path):
+def get_dicts_from_exist_file(file_path):
     with open(file_path, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         rows = list(reader)
         for row in rows:
             # if row['Group'] == user_args.lable2+"-"+user_args.lable1:
             #     return row
-            if "-"+user_args.lable1 in row['Group']:
-                return row
+            # if "-"+user_args.lable1 in row['Group']:
+            #     return row
+            if row['Group'] == user_args.lable1:
+                group1_dict = dict(row)
+            elif row['Group'] == user_args.lable2:
+                group2_dict = dict(row)
+            else:
+                return None, None
+    return group1_dict, group2_dict
 
 # run the analyze steps on the current transcript directory
 def runAnalyze(transcript_dir):
+    # assign lists as global so they can be modified within the function
+    #global list_of_dicts_group1, list_of_dicts_group2
     #print(f"Analyzing transcript: {transcript_dir}")
     # get GeneSymbol and TranscriptID of current path
-    geneSymbol, transcriptID = get_GeneSynbol_transcriptID(transcript_dir)
+    geneSymbol, transcriptID = get_GeneSymbol_transcriptID(transcript_dir)
+    if geneSymbol == None or transcriptID == None:
+        return
     # create 'netMHC' results directory
     netMHC_dir = os.path.join(transcript_dir,"netMHC")
     if os.path.isdir(netMHC_dir):
@@ -157,63 +169,85 @@ def runAnalyze(transcript_dir):
         for file in os.listdir(netMHC_dir):
             if file.endswith(".csv"):
                 os.chdir(netMHC_dir)
-                difference_dict = get_difference_dict_from_exist_file(os.path.abspath(file))
+                group1_dict, group2_dict = get_dicts_from_exist_file(os.path.abspath(file))
                 #print(difference_dict)
                 os.chdir(user_args.input_dir)
-                if difference_dict is None:
-                    print(netMHC_dir)
-                return difference_dict
+                if group1_dict is None or group2_dict is None:
+                    print(f"Could not find group1 and group2 dicts from exist directory {netMHC_dir}")
+                    return
+                return group1_dict, group2_dict
+                #list_of_dicts_group1.append(group1_dict)
+                #list_of_dicts_group2.append(group2_dict)
+                #print(list_of_dicts_group1, list_of_dicts_group2)
+                return
     os.mkdir(netMHC_dir)
     # Get all files in the directory
     #files = os.listdir(transcript_dir)
     files = get_absolute_file_paths(transcript_dir)
-    print(f"Files found in {transcript_dir}:{files}")
-    # Search for full AA sequence fasta file
-    fullSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'fullAA' in file), None)
-    groups=getGroups(fullSeq_file) # define the types of the sequences, according to the group's names 
+    #print(f"Files found in {transcript_dir}:{files}")
+    # Search for group1 AA sequence fasta file
+    group1Seq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and f'AA_{user_args.lable1}' in file), None)
+    groups=getGroupsForms(group1Seq_file) # define the forms (inclusion/exclusion) of the groups (lable1/lable2) 
     if groups is None:
-        print(f"Error in define groups of {transcript_dir}. Skipping.")
+        print(f"Error in define forms of groups in {transcript_dir}. Skipping.")
         return
-    # run netMHC command on full sequence
-    full_seq_sb_dict = run_netmhc(fullSeq_file, netMHC_dir,groups['full'])
-    # add GeneSymbol,TranscriptID and Group keys at the beggining of the dictionary
-    update_full_dict = {"GeneSymbol": geneSymbol, "TranscriptID": transcriptID, "Group": groups['full']}
-    update_full_dict.update(full_seq_sb_dict)
-    # Search for spliced AA sequence fasta file
-    splicedSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'splicedAA' in file), None)
-    # run netmHC command on spliced sequence
-    spliced_seq_sb_dict = run_netmhc(splicedSeq_file, netMHC_dir, groups['spliced'], spliced=True)
-    # add GeneSymbol,TranscriptID and Group keys at the beggining of the dictionary
-    update_spliced_dict = {"GeneSymbol": geneSymbol, "TranscriptID": transcriptID, "Group": groups['spliced']}
-    update_spliced_dict.update(spliced_seq_sb_dict)
+    # run netMHC command on group1 sequence
+    group1_seq_sb_dict = run_netmhc(group1Seq_file, netMHC_dir,groups['1'], user_args.lable1)
+    # add GeneSymbol,TranscriptID and Form keys at the beggining of the dictionary
+    group1_dict = {"GeneSymbol": geneSymbol, "TranscriptID": transcriptID, "Group": user_args.lable1, "Form": groups['1']}
+    group1_dict.update(group1_seq_sb_dict)
+    # Search for group2 AA sequence fasta file
+    group2Seq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and f'AA_{user_args.lable2}' in file), None)
+    # run netmHC command on group2 sequence
+    group2_seq_sb_dict = run_netmhc(group2Seq_file, netMHC_dir, groups['2'], user_args.lable2)
+    # add GeneSymbol,TranscriptID and Form keys at the beggining of the dictionary
+    group2_dict = {"GeneSymbol": geneSymbol, "TranscriptID": transcriptID, "Group": user_args.lable2, "Form": groups['2']}
+    group2_dict.update(group2_seq_sb_dict)
 
     # calculate the difference between SB in each HLA allele
-    # differences_dict = calculate_SB_difference(update_full_dict, update_spliced_dict)
+    # differences_dict = calculate_SB_difference(update_inclusion_dict, update_exclusion_dict)
     # update_difference_dict = {"GeneSymbol": geneSymbol, "TranscriptID": transcriptID, "Group":user_args.lable2+"-"+user_args.lable1}
     # update_difference_dict.update(differences_dict)
-    # save_results_to_csv([update_full_dict, update_spliced_dict,update_difference_dict], netMHC_dir, filename=geneSymbol+"_"+transcriptID+"_"+"StrongBinders.csv")
+    # save_results_to_csv([update_inclusion_dict, update_exclusion_dict,update_difference_dict], netMHC_dir, filename=geneSymbol+"_"+transcriptID+"_"+"StrongBinders.csv")
     # return update_difference_dict
     
-    # Without calculating the diffrences - just return the HLA dict of the treatment group
-    save_results_to_csv([update_full_dict, update_spliced_dict], netMHC_dir, filename=geneSymbol+"_"+transcriptID+"_"+"StrongBinders.csv")
-    if groups['full'] == user_args.lable2:
-        return update_full_dict
-    elif groups['spliced'] == user_args.lable2:
-        return update_spliced_dict
+    # Without calculating the diffrences - just  save the HLA dict's of the groups in one csv file and return the dicts
+    save_results_to_csv([group1_dict, group2_dict], netMHC_dir, filename=geneSymbol+"_"+transcriptID+"_"+"StrongBinders.csv")
+    return group1_dict, group2_dict
+    #list_of_dicts_group1.append(group1_dict)
+    #list_of_dicts_group2.append(group2_dict)
+    # if groups['inclusion'] == user_args.lable2:
+    #     return group1_dict
+    # elif groups['exclusion'] == user_args.lable2:
+    #     return group2_dict
 
-    #print( update_full_dict,"\n",update_spliced_dict,"\n",update_difference_dict)
+
+    #print( update_inclusion_dict,"\n",update_exclusion_dict,"\n",update_difference_dict)
 
 
-    
+# global args
+list_of_dicts_group1 = [] 
+list_of_dicts_group2 = []  
 
 if __name__ == '__main__':
     # get absolute paths of transcripts directories
     pathes = getPaths(user_args.input_dir)
     #print(f"Directories that has been found in {user_args.input_dir}:\n{pathes}")
-    pool = multiprocessing.Pool(processes=15) 
-    list_of_differences_dict = pool.map(runAnalyze, pathes)
+    pool = multiprocessing.Pool(processes=10) 
+    #list_of_differences_dict = pool.map(runAnalyze, pathes)
+    #list_of_dicts_group1, list_of_dicts_group2 = pool.map(runAnalyze, pathes)
+    #pool.map(runAnalyze, pathes)
+    results = pool.map(runAnalyze, pathes)
     pool.close()
     pool.join()
+    #print(results)
+    for group1_dict, group2_dict in results:
+        list_of_dicts_group1.append(group1_dict)
+        list_of_dicts_group2.append(group2_dict)
+    #print(list_of_dicts_group1)
+    #print(list_of_dicts_group2)
+    #print(list_of_dicts_group1, list_of_dicts_group2)
     #print("list of dicts: ", list_of_differences_dict)
-    save_results_to_csv(list_of_differences_dict, user_args.input_dir, filename="StrongBinders_All.csv")
+    save_results_to_csv(list_of_dicts_group1, user_args.input_dir, filename=f"{user_args.lable1}_StrongBinders_All.csv")
+    save_results_to_csv(list_of_dicts_group2, user_args.input_dir, filename=f"{user_args.lable2}_StrongBinders_All.csv")
     print("Done proccessing netMHC on samples.")
