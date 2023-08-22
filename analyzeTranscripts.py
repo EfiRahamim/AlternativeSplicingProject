@@ -68,7 +68,7 @@ def getExonByRegions(chr, strand_sign, exonStart, exonEnd):
   if not r_r.ok:
     #r_r.raise_for_status()
     #sys.exit
-    print(f"Error in getting exon by regions.")
+    print(f"Error in getting exon by regions. Status code: {r_r.status_code}")
     return None
   exon = r_r.text.upper()
   return exon
@@ -85,7 +85,7 @@ def getSeq(row, transcript, as_type):
   if not r_t.ok:
     #r_t.raise_for_status()
     #sys.exit
-    print(f"Error in: {server+ext_transcript}")
+    print(f"Error in: {server+ext_transcript}. status code: {r_t.status_code}")
     return None, None
   # edit the "\n" in the sequence - keep only first occurance of "\n"
   seq = r_t.text.replace("\n", "")
@@ -203,9 +203,9 @@ def getNovelTranscriptFasta(novel_transcript_id):
       if feature == "exon" and transcript_found:
         chr, strand, exonStart, exonEnd = line_fields[0], line_fields[6],line_fields[3], line_fields[4]
         exon = getExonByRegions(chr, strand, exonStart, exonEnd) # get the exon
-        if strand == "+":
+        if exon != None and strand == "+":
           novel_transcript_seq = novel_transcript_seq+exon # positive strand: add the exon to the sequence, at the end
-        elif strand == "-":
+        elif exon != None and strand == "-":
           novel_transcript_seq = exon+novel_transcript_seq # negative strand: add the exon to the sequence, at the beggining
         print(f"Adding exon: {exonStart}-{exonEnd}")
         continue
@@ -494,7 +494,7 @@ def run_analyse(input_file):
   with open(input_file, 'r') as csvfile:
     reader = csv.DictReader(csvfile)
     rows = list(reader)
-  pool = multiprocessing.Pool(processes=10) 
+  pool = multiprocessing.Pool(processes=5) 
   pool.map(run_one_row,rows)
   pool.close()
   pool.join()
