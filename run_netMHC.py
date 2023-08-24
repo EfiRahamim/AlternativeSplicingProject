@@ -5,6 +5,8 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 parser.add_argument("-i", action='store', dest='input_dir', required=True, help="Input directory of genes directories")
 parser.add_argument("-l1", action='store', dest='lable1', required=True, help="Lable of first group (same order as in the rMATS analysis).")
 parser.add_argument("-l2", action='store', dest='lable2', required=True, help="Lable of second group (same order as in the rMATS analysis).")
+parser.add_argument("-rank", action='store', dest='rank', required=True, default=0.5, help="Threshold for high binding peptides (Rank)")
+parser.add_argument("-as_type", action='store', dest='as_type', required=True,choices=['SE', 'A5SS', 'A3SS', 'MXE', 'RI'] ,help="Type of splicing event.")
 user_args = parser.parse_args()
 
 
@@ -104,6 +106,7 @@ def run_netmhc(fasta_file, netMHC_dir, form, group):
               "-thrfmt", "/private/common/Software/netMHC-4.0/threshold/%s.thr",
               "-rdir", "/private/common/Software/netMHC-4.0/Linux_x86_64",
               "-version", "/private/common/Software/netMHC-4.0/Linux_x86_64/data/version ",
+              "-rth", user_args.rank,
               "-a", "HLA-A0101,HLA-A0201,HLA-A0301,HLA-A2402,HLA-A2601,HLA-B0702,HLA-B0801,HLA-B1501,HLA-B2705,HLA-B3901,HLA-B4001,HLA-B5801",
               "-l", "8,9,10,11",
               "-f",fasta_file,
@@ -162,7 +165,7 @@ def runAnalyze(transcript_dir):
     if geneSymbol == None or transcriptID == None:
         return
     # create 'netMHC' results directory
-    netMHC_dir = os.path.join(transcript_dir,"netMHC")
+    netMHC_dir = os.path.join(transcript_dir,f"netMHC_Rank{user_args.rank}")
     if os.path.isdir(netMHC_dir):
         #print(f"Transcript {transcript_dir} was already checked. Results can be found at {netMHC_dir}.")
         #return
@@ -179,7 +182,7 @@ def runAnalyze(transcript_dir):
                 #list_of_dicts_group1.append(group1_dict)
                 #list_of_dicts_group2.append(group2_dict)
                 #print(list_of_dicts_group1, list_of_dicts_group2)
-                return
+                #return
     os.mkdir(netMHC_dir)
     # Get all files in the directory
     #files = os.listdir(transcript_dir)
@@ -194,14 +197,14 @@ def runAnalyze(transcript_dir):
     # run netMHC command on group1 sequence
     group1_seq_sb_dict = run_netmhc(group1Seq_file, netMHC_dir,groups['1'], user_args.lable1)
     # add GeneSymbol,TranscriptID and Form keys at the beggining of the dictionary
-    group1_dict = {"GeneSymbol": geneSymbol, "TranscriptID": transcriptID, "Group": user_args.lable1, "Form": groups['1']}
+    group1_dict = {"GeneSymbol": geneSymbol, "TranscriptID": transcriptID, "Group": user_args.lable1,"SplicingType":user_args.as_type, "Form": groups['1'], "Rank": user_args.rank}
     group1_dict.update(group1_seq_sb_dict)
     # Search for group2 AA sequence fasta file
     group2Seq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and f'AA_{user_args.lable2}' in file), None)
     # run netmHC command on group2 sequence
     group2_seq_sb_dict = run_netmhc(group2Seq_file, netMHC_dir, groups['2'], user_args.lable2)
     # add GeneSymbol,TranscriptID and Form keys at the beggining of the dictionary
-    group2_dict = {"GeneSymbol": geneSymbol, "TranscriptID": transcriptID, "Group": user_args.lable2, "Form": groups['2']}
+    group2_dict = {"GeneSymbol": geneSymbol, "TranscriptID": transcriptID, "Group": user_args.lable2, "SplicingType":user_args.as_type, "Form": groups['2'], "Rank": user_args.rank}
     group2_dict.update(group2_seq_sb_dict)
 
     # calculate the difference between SB in each HLA allele
@@ -227,7 +230,8 @@ def runAnalyze(transcript_dir):
 
 # global args
 list_of_dicts_group1 = [] 
-list_of_dicts_group2 = []  
+list_of_dicts_group2 = []
+list_of_dicts = [] 
 
 if __name__ == '__main__':
     # get absolute paths of transcripts directories
@@ -242,12 +246,15 @@ if __name__ == '__main__':
     pool.join()
     #print(results)
     for group1_dict, group2_dict in results:
-        list_of_dicts_group1.append(group1_dict)
-        list_of_dicts_group2.append(group2_dict)
+        #list_of_dicts_group1.append(group1_dict)
+        #list_of_dicts_group2.append(group2_dict)
+        list_of_dicts.append(group1_dict)
+        list_of_dicts.append(group2_dict)
     #print(list_of_dicts_group1)
     #print(list_of_dicts_group2)
     #print(list_of_dicts_group1, list_of_dicts_group2)
     #print("list of dicts: ", list_of_differences_dict)
-    save_results_to_csv(list_of_dicts_group1, user_args.input_dir, filename=f"{user_args.lable1}_StrongBinders_All.csv")
-    save_results_to_csv(list_of_dicts_group2, user_args.input_dir, filename=f"{user_args.lable2}_StrongBinders_All.csv")
+    #save_results_to_csv(list_of_dicts_group1, user_args.input_dir, filename=f"{user_args.lable1}_StrongBinders_All.csv")
+    #save_results_to_csv(list_of_dicts_group2, user_args.input_dir, filename=f"{user_args.lable2}_StrongBinders_All.csv")
+    save_results_to_csv(list_of_dicts,user_args.input_dir, filename=f"netMHC_rank{user_args.rank}_StrongBinders_All.csv")
     print("Done proccessing netMHC on samples.")
