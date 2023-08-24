@@ -3,11 +3,11 @@ library(ggplot2)
 library(tidyr)
 library(dplyr)
 
-SB_result_path <- "/private5/Projects/Efi/AS/AML/X204SC22102645-Z01-F005/rMATS/Mock_Indisulam_6h/A3SS/StrongBinders_All.csv"
-output_dir <- "/private5/Projects/Efi/AS/AML/X204SC22102645-Z01-F005/rMATS/Mock_Indisulam_6h/A3SS/"
-group1 <- "Mock"
-group2 <- "Indisulam"
-as <- "A3SS"
+SB_result_path <- "/private10/Projects/Efi/AML_secondbatch/test/SE_TestForNetMHC/Treatment_StrongBinders_All.csv"
+output_dir <- "/private10/Projects/Efi/AML_secondbatch/test/SE_TestForNetMHC"
+#group1 <- "Mock"
+#group2 <- "Indisulam"
+as <- "SE"
 
 if (as=='SE') {
   AS_type <- "Exon Skipping"
@@ -27,9 +27,9 @@ if (as=='SE') {
 gene_data <- read.csv(SB_result_path)
 
 # Step 3: Calculate the sum of positive values in each row and add it as a new column
-gene_data <- gene_data %>%
-  rowwise() %>%
-  mutate(Sum_Positive_Values = sum(c_across(starts_with("HLA."))[c_across(starts_with("HLA.")) > 0]))
+# gene_data <- gene_data %>%
+#   rowwise() %>%
+#   mutate(Sum_Positive_Values = sum(c_across(starts_with("HLA."))[c_across(starts_with("HLA.")) > 0]))
 
 # Sort the data frame by "Sum_Positive_Values" in descending order and keep only the top 25 genes
 top_25_genes <- gene_data %>%
