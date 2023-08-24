@@ -203,6 +203,8 @@ def getNovelTranscriptFasta(novel_transcript_id):
       if feature == "exon" and transcript_found:
         chr, strand, exonStart, exonEnd = line_fields[0], line_fields[6],line_fields[3], line_fields[4]
         exon = getExonByRegions(chr, strand, exonStart, exonEnd) # get the exon
+        if exon ==  None:
+          return None
         if exon != None and strand == "+":
           novel_transcript_seq = novel_transcript_seq+exon # positive strand: add the exon to the sequence, at the end
         elif exon != None and strand == "-":
@@ -253,7 +255,7 @@ def findORF(novel_transcript_fasta):
 
 # function to check the strand of the ORF
 def checkORFStrand(orf_fasta_id):
-  pattern = r":(\d+)-(\d+)$"
+  pattern = r":\w*(\d+)-(\d+)$"
   match = re.search(pattern, orf_fasta_id)
   if match == None:
     print(f"Error in retreving ORF position of ORF ID: {orf_fasta_id}")
@@ -494,7 +496,7 @@ def run_analyse(input_file):
   with open(input_file, 'r') as csvfile:
     reader = csv.DictReader(csvfile)
     rows = list(reader)
-  pool = multiprocessing.Pool(processes=5) 
+  pool = multiprocessing.Pool(processes=10) 
   pool.map(run_one_row,rows)
   pool.close()
   pool.join()
