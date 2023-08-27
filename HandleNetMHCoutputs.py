@@ -1,9 +1,24 @@
 import pandas as pd
-import os, glob
+import os, glob,argparse
+import regex as re
 # input directory and group names
-in_dir = "/private10/Projects/Efi/AML/rMATS/Control_PladienolideB/"
-group1_name = "Pladienolide-B"
-group2_name = "Control_SFmutations"
+# in_dir = "/private10/Projects/Efi/AML/rMATS/Control_PladienolideB/"
+# output_dir = "/private10/Projects/Efi/AML/NeoEpitopesAnalyze/"
+# group1_name = "Pladienolide-B"
+# group2_name = "Control_SFmutations"
+
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="Filter NetMHC output by StrongBinding values and merge outputs together to one file. Also filtering out mutual peptides that appear in both group")
+parser.add_argument("-i", action='store', dest='in_dir', required=True, help="Input directory of comparisons groups")
+parser.add_argument("-o", action='store', dest='output_dir', required=True, help="Output directory for merged file to be written")
+parser.add_argument("-l1", action='store', dest='group1_name', required=True, help="Name of group 1")
+parser.add_argument("-l2", action='store', dest='group2_name', required=True, help="Name of group 2")
+user_args = parser.parse_args()
+
+in_dir = user_args.in_dir
+output_dir = user_args.output_dir
+group1_name = user_args.group1_name
+group2_name = user_args.group2_name
+
 # list of HLA types
 HLA_types = ["HLA-A0101","HLA-A0201","HLA-A0301","HLA-A2402","HLA-A2601","HLA-B0702","HLA-B0801","HLA-B1501","HLA-B2705","HLA-B3901","HLA-B4001","HLA-B5801"]
 # header of data frame
@@ -30,11 +45,16 @@ group1_merged = pd.DataFrame()
 group2_merged = pd.DataFrame()
 # filter each file by rank < 0.5 and merge them all (for each group)
 for group1_file, group2_file in zip(group1_files, group2_files):
+    # get type of splicing event
+    splicing_event_pattern = fr"{in_dir}(\w+)/"
+    splicing_event = re.search(splicing_event_pattern, group1_file).group(1)
     # read file and change header
     df_1 = pd.read_csv(group1_file, sep='\t', header = 1, index_col=False)
     df_2 = pd.read_csv(group2_file, sep='\t', header = 1, index_col=False)
     df_1.columns = unified_col
     df_2.columns = unified_col
+    df_1.insert(0, "Splicing Event", splicing_event)
+    df_2.insert(0, "Splicing Event", splicing_event)
     # subset data frame by strong binding (sb) value (rank < 0.5)
     df_1_filteredSB = df_1[(df_1['HLA-A0101_Rank'] <= 0.5) | 
                (df_1['HLA-A0201_Rank'] <= 0.5) |
@@ -71,58 +91,59 @@ for group1_file, group2_file in zip(group1_files, group2_files):
 merged_all = pd.DataFrame()
 for HLA_type in HLA_types:
     # filter data frame 1 by rank value and current HLA allele
-    sb_group1 = group1_merged.loc[group1_merged[f'{HLA_type}_Rank'] <=0.5, ["Pos", "Peptide", "ID",f'{HLA_type}_Rank']]
+    sb_group1 = group1_merged.loc[group1_merged[f'{HLA_type}_Rank'] <=0.5, ["Splicing Event", "Pos", "Peptide", "ID",f'{HLA_type}_Rank']]
     sb_group1.insert(0, "Group", group1_name)
     # filter data frame 2 by rank value and current HLA allele
-    sb_group2 = group2_merged.loc[group2_merged[f'{HLA_type}_Rank'] <=0.5, ["Pos", "Peptide", "ID",f'{HLA_type}_Rank']]
+    sb_group2 = group2_merged.loc[group2_merged[f'{HLA_type}_Rank'] <=0.5, ["Splicing Event", "Pos", "Peptide", "ID",f'{HLA_type}_Rank']]
     sb_group2.insert(0, "Group", group2_name)
     # find the symetric difference between the data frames
     symmetric_diff_df = pd.concat([sb_group1[~sb_group1['Peptide'].isin(sb_group2['Peptide'])], sb_group2[~sb_group2['Peptide'].isin(sb_group1['Peptide'])]])
-    
+    # merge the symetric difference data frame to he previous ones
     if merged_all.empty:
         merged_all = symmetric_diff_df
     else:
         merged_all = pd.concat([merged_all, symmetric_diff_df], ignore_index=True)
+# drop duplicates rows
+merged_all.drop_duplicates()
+output_file = os.path.join(output_dir, f"{group1_name}_{group2_name}_merged.csv")
+merged_all.to_csv(output_file, index=False)
 
-group_counts = merged_all.groupby('Group').size()
-print(group_counts)
+# # netMHC output
+# group_1_output = "/private10/Projects/Efi/AML/rMATS/Control_PladienolideB/SE/ENSG00000282218.1_RP1-179P9.3/260616/ENST00000052569.10/netMHC_Rank0.5/netMHC_exclusionAA_Pladienolide-B.xls"
+# group_2_output = "/private10/Projects/Efi/AML/rMATS/Control_PladienolideB/SE/ENSG00000282218.1_RP1-179P9.3/260616/ENST00000052569.10/netMHC_Rank0.5/netMHC_inclusionAA_Control_SFmutations.xls"
+# group1_name = "Pladienolide-B"
+# group2_name = "Control_SFmutations"
+# # read files
+# df_1 = pd.read_csv(group_1_output, sep='\t', header = 1, index_col=False)
+# df_2 = pd.read_csv(group_2_output, sep='\t', header = 1, index_col=False)
+# df_1.columns = unified_col
+# df_2.columns = unified_col
+# # subset data frames by strong binding (sb) value
+# sb_df_1 = df_1[(df_1['HLA-A0101_Rank'] <= 0.5) | 
+#                (df_1['HLA-A0201_Rank'] <= 0.5) |
+#                (df_1['HLA-A0301_Rank'] <= 0.5) |
+#                (df_1['HLA-A2402_Rank'] <= 0.5) |
+#                (df_1['HLA-A2601_Rank'] <= 0.5) |
+#                (df_1['HLA-B0702_Rank'] <= 0.5) |
+#                (df_1['HLA-B0801_Rank'] <= 0.5) |
+#                (df_1['HLA-B1501_Rank'] <= 0.5) |
+#                (df_1['HLA-B2705_Rank'] <= 0.5) |
+#                (df_1['HLA-B3901_Rank'] <= 0.5) |
+#                (df_1['HLA-B4001_Rank'] <= 0.5) |
+#                (df_1['HLA-B5801_Rank'] <= 0.5)]
+# merged_all = pd.DataFrame()
+# for HLA_type in HLA_types:
+#     # filter data frame 1 by rank value
+#     sb_group1 = df_1.loc[df_1[f'{HLA_type}_Rank'] <=0.5, ["Pos", "Peptide", "ID",f'{HLA_type}_nM',f'{HLA_type}_Rank',f'{HLA_type}_Core' ]]
+#     sb_group1.insert(0, "Group", group1_name)
+#     # filter data frame 1 by rank value
+#     sb_group2 = df_2.loc[df_2[f'{HLA_type}_Rank'] <=0.5, ["Pos", "Peptide", "ID",f'{HLA_type}_nM',f'{HLA_type}_Rank',f'{HLA_type}_Core' ]]
+#     sb_group2.insert(0, "Group", group2_name)
+#     # find the symetric difference between the data frames
+#     symmetric_diff_df = pd.concat([sb_group1[~sb_group1['Peptide'].isin(sb_group2['Peptide'])], sb_group2[~sb_group2['Peptide'].isin(sb_group2['Peptide'])]])
+#     if merged_all.empty:
+#         merged_all = symmetric_diff_df
+#     else:
+#         merged_all = pd.concat([merged_all, symmetric_diff_df])
 
-# netMHC output
-group_1_output = "/private10/Projects/Efi/AML/rMATS/Control_PladienolideB/SE/ENSG00000282218.1_RP1-179P9.3/260616/ENST00000052569.10/netMHC_Rank0.5/netMHC_exclusionAA_Pladienolide-B.xls"
-group_2_output = "/private10/Projects/Efi/AML/rMATS/Control_PladienolideB/SE/ENSG00000282218.1_RP1-179P9.3/260616/ENST00000052569.10/netMHC_Rank0.5/netMHC_inclusionAA_Control_SFmutations.xls"
-group1_name = "Pladienolide-B"
-group2_name = "Control_SFmutations"
-# read files
-df_1 = pd.read_csv(group_1_output, sep='\t', header = 1, index_col=False)
-df_2 = pd.read_csv(group_2_output, sep='\t', header = 1, index_col=False)
-df_1.columns = unified_col
-df_2.columns = unified_col
-# subset data frames by strong binding (sb) value
-sb_df_1 = df_1[(df_1['HLA-A0101_Rank'] <= 0.5) | 
-               (df_1['HLA-A0201_Rank'] <= 0.5) |
-               (df_1['HLA-A0301_Rank'] <= 0.5) |
-               (df_1['HLA-A2402_Rank'] <= 0.5) |
-               (df_1['HLA-A2601_Rank'] <= 0.5) |
-               (df_1['HLA-B0702_Rank'] <= 0.5) |
-               (df_1['HLA-B0801_Rank'] <= 0.5) |
-               (df_1['HLA-B1501_Rank'] <= 0.5) |
-               (df_1['HLA-B2705_Rank'] <= 0.5) |
-               (df_1['HLA-B3901_Rank'] <= 0.5) |
-               (df_1['HLA-B4001_Rank'] <= 0.5) |
-               (df_1['HLA-B5801_Rank'] <= 0.5)]
-merged_all = pd.DataFrame()
-for HLA_type in HLA_types:
-    # filter data frame 1 by rank value
-    sb_group1 = df_1.loc[df_1[f'{HLA_type}_Rank'] <=0.5, ["Pos", "Peptide", "ID",f'{HLA_type}_nM',f'{HLA_type}_Rank',f'{HLA_type}_Core' ]]
-    sb_group1.insert(0, "Group", group1_name)
-    # filter data frame 1 by rank value
-    sb_group2 = df_2.loc[df_2[f'{HLA_type}_Rank'] <=0.5, ["Pos", "Peptide", "ID",f'{HLA_type}_nM',f'{HLA_type}_Rank',f'{HLA_type}_Core' ]]
-    sb_group2.insert(0, "Group", group2_name)
-    # find the symetric difference between the data frames
-    symmetric_diff_df = pd.concat([sb_group1[~sb_group1['Peptide'].isin(sb_group2['Peptide'])], sb_group2[~sb_group2['Peptide'].isin(sb_group2['Peptide'])]])
-    if merged_all.empty:
-        merged_all = symmetric_diff_df
-    else:
-        merged_all = pd.concat([merged_all, symmetric_diff_df])
-
-print()
+# print()
