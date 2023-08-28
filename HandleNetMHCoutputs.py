@@ -91,10 +91,10 @@ for group1_file, group2_file in zip(group1_files, group2_files):
 merged_all = pd.DataFrame()
 for HLA_type in HLA_types:
     # filter data frame 1 by rank value and current HLA allele
-    sb_group1 = group1_merged.loc[group1_merged[f'{HLA_type}_Rank'] <=0.5, ["Splicing Event", "Pos", "Peptide", "ID",f'{HLA_type}_Rank']]
+    sb_group1 = group1_merged.loc[group1_merged[f'{HLA_type}_Rank'] <=0.5, ["Splicing Event", "Peptide", "ID",f'{HLA_type}_Rank']]
     sb_group1.insert(0, "Group", group1_name)
     # filter data frame 2 by rank value and current HLA allele
-    sb_group2 = group2_merged.loc[group2_merged[f'{HLA_type}_Rank'] <=0.5, ["Splicing Event", "Pos", "Peptide", "ID",f'{HLA_type}_Rank']]
+    sb_group2 = group2_merged.loc[group2_merged[f'{HLA_type}_Rank'] <=0.5, ["Splicing Event", "Peptide", "ID",f'{HLA_type}_Rank']]
     sb_group2.insert(0, "Group", group2_name)
     # find the symetric difference between the data frames
     symmetric_diff_df = pd.concat([sb_group1[~sb_group1['Peptide'].isin(sb_group2['Peptide'])], sb_group2[~sb_group2['Peptide'].isin(sb_group1['Peptide'])]])
