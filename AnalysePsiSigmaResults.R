@@ -3,7 +3,7 @@ library(argparse)
 parser <- ArgumentParser(description='Filter PSI-Sigma initial results.\n The filter is according to: P_value, FDR and ΔPSI value.')
 parser$add_argument("-i", action="store", dest="PSI_Sigma_dir", help="Super directory of PSI-Sigma result (Where sub-directories of comparisons are located)")
 parser$add_argument("-o", action="store", dest="output_dir", help="Directory to store the output.")
-parser$add_argument("-dir_name", action="store", dest="output_dir_name", help="The name of the actual directories of the results")
+parser$add_argument("-dir_name", action="store", dest="output_dir_name", required=FALSE, help="The name of the actual directories of the results")
 parser$add_argument("-file_name", action="store", dest="output_file_name", help="The name of PSI-Sigma results file. default: 'PSI-Sigma_r10_ir3.sorted.txt' ", default="PSI-Sigma_r10_ir3.sorted.txt")
 parser$add_argument("-psi", action="store", dest="delta_PSI", help="ΔPSI (in precentages) for filtering. default: 20.", type="integer", default=20)
 parser$add_argument("-pval", action="store", dest="p_value", help="P-value for filtering. default: 0.05", type="double", default=0.05)
@@ -12,21 +12,21 @@ parser$add_argument("--novelSS", action="store_true", dest="novelSS", help="PSI-
 parser$add_argument("-gene_prefix", action="store", dest="gene_prefix", help="Prefix of novel genes. default: MSTRG", default="MSTRG")
 parser$add_argument("-ncol", action="store", dest="ncol", help="Number of columns to plot in the volcano plots. default: 3", type="integer", default=3)
 user_args <- parser$parse_args()
-stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir) && !is.null(user_args$output_dir_name))
+stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir))
 print(user_args)
 
 # # DEBUG Arguments
-# PSI_Sigma_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/PSI-Sigma/UM/"
-# output_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/PSI-Sigma/UM/"
-# output_dir_name <- "Output_copy"
-# output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
-# delta_PSI = 20
-# p_value = 0.05
-# fdr = 0.05
-# ncol_plot <- 3
-# novelSS = T
-# gene_prefix = "MSTRG"
-# ncol_plot <- 3
+PSI_Sigma_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/NonSotredGTF/"
+output_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/NonSotredGTF/"
+output_dir_name <- NULL
+output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
+delta_PSI = 20
+p_value = 0.05
+fdr = 0.05
+ncol_plot <- 3
+novelSS = T
+gene_prefix = "MSTRG"
+
 
 # Arguments assignment
 PSI_Sigma_dir <- user_args$PSI_Sigma_dir
@@ -44,12 +44,21 @@ library(dplyr)
 library(ggplot2)
 
 # read results files into list of data frames
-output_dirs <- dir(PSI_Sigma_dir, recursive = T, pattern = output_dir_name, full.names = T, include.dirs = TRUE)
+if (!is.null(output_dir_name) ){
+  output_dirs <- dir(PSI_Sigma_dir, recursive = T, pattern = output_dir_name, full.names = T, include.dirs = TRUE)
+} else {
+  output_dirs <- list.dirs(PSI_Sigma_dir, recursive = F, full.names = T)
+}
 full_df_list <- list()
 filtered_df_list <- list()
 comparisons <- c()
 for (dir in output_dirs){
-  comparison <- basename(dirname(dir)) # get comparison groups
+  if (!is.null(output_dir_name) ){
+    comparison <- basename(dirname(dir)) # get comparison groups
+  } else {
+    comparison <- basename(dir) # get comparison groups
+  }
+  
   comparisons <- append(comparisons, comparison) # add comparison group to vector
   result_file <- list.files(dir, pattern= output_file_name, full.names=T) # get result file
   df <- read.csv(result_file, sep='\t') # read result file
