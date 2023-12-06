@@ -11,22 +11,25 @@ parser$add_argument("-fdr", action="store", dest="fdr", help="FDR for filtering.
 parser$add_argument("--novelSS", action="store_true", dest="novelSS", help="PSI-Sigma results include novel transcripts. Plot will be generated for results with and without novel transcripts.")
 parser$add_argument("-gene_prefix", action="store", dest="gene_prefix", help="Prefix of novel genes. default: MSTRG", default="MSTRG")
 parser$add_argument("-ncol", action="store", dest="ncol", help="Number of columns to plot in the volcano plots. default: 3", type="integer", default=3)
+parser$add_argument("--filter_by_TM", action="store_true", dest="filter_tm", help="Filter results by Trans-Membrane (TM) proteins")
+parser$add_argument("-tm", action="store", dest="tm_table", help="Path of TransMembrane Domains table (UniProt). Defualt: /private10/Projects/Efi/General/transmembrane_Nov23.csv", default="/private10/Projects/Efi/General/transmembrane_Nov23.csv")
 user_args <- parser$parse_args()
 stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir))
 print(user_args)
 
 # # DEBUG Arguments
-PSI_Sigma_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/NonSotredGTF/"
-output_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/NonSotredGTF/"
-output_dir_name <- NULL
-output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
-delta_PSI = 20
-p_value = 0.05
-fdr = 0.05
-ncol_plot <- 3
-novelSS = T
-gene_prefix = "MSTRG"
-
+# PSI_Sigma_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/NonSotredGTF/"
+# output_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/NonSotredGTF/"
+# output_dir_name <- NULL
+# output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
+# delta_PSI = 20
+# p_value = 0.05
+# fdr = 0.05
+# ncol_plot <- 3
+# novelSS = T
+# gene_prefix = "MSTRG"
+# filter_tm <- T
+# tm_table <- "/private10/Projects/Efi/General/transmembrane_Nov23.csv"
 
 # Arguments assignment
 PSI_Sigma_dir <- user_args$PSI_Sigma_dir
@@ -39,6 +42,8 @@ fdr <- user_args$fdr
 novelSS <- user_args$novelSS
 gene_prefix <- user_args$gene_prefix
 ncol_plot <- user_args$ncol
+filter_tm <- user_args$filter_tm
+tm_table <- user_args$tm_table
 
 library(dplyr)
 library(ggplot2)
@@ -62,6 +67,14 @@ for (dir in output_dirs){
   comparisons <- append(comparisons, comparison) # add comparison group to vector
   result_file <- list.files(dir, pattern= output_file_name, full.names=T) # get result file
   df <- read.csv(result_file, sep='\t') # read result file
+  # filter by TM proteins
+  if (filter_tm){
+    # load TM table
+    tm <- read.csv(tm_table)
+    # merge AS results with TM table according to Gene Synbol
+    df <- df[df$Gene.Symbol %in% tm$GeneSymbol,]
+    print(paste0("Merging with TM table: ", nrow(df), " results."))
+  }
   full_df_list[[comparison]] <- df
   filtered_df_list[[comparison]] <- subset(df,abs(ΔPSI....)>= delta_PSI & T.test.p.value < p_value & FDR..BH. < fdr )
 }
