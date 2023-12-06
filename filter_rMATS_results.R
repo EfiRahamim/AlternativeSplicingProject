@@ -6,7 +6,7 @@ parser$add_argument("-i", action="store", dest="input", help="Directory of rMATS
 parser$add_argument("-o", action="store", dest="output", help="Output directory to write the filtered table. Default: working directory.", default = getwd() )
 #parser$add_argument("-type", action="store", dest="type", help="Type of Splicing Event - SE/A5SS/A3SS/MXE/RI.", choices=c("SE","A3SS","A5SS","MXE","RI"))
 parser$add_argument("--filter_by_TM", action="store_true", dest="filter_tm", help="Filter results by Trans-Membrane (TM) proteins")
-parser$add_argument("-tm", action="store", dest="tm", help="Path of TransMembrane Domains table (UniProt). Defualt: /private10/Projects/Efi/General/transmembrane_Aug23.csv", default="/private10/Projects/Efi/General/transmembrane_Aug23.csv")
+parser$add_argument("-tm", action="store", dest="tm", help="Path of TransMembrane Domains table (UniProt). Defualt: /private10/Projects/Efi/General/transmembrane_Nov23.csv", default="/private10/Projects/Efi/General/transmembrane_Nov23.csv")
 parser$add_argument("-pvalue", action="store", dest="pvalue", help="P-Value threshold. Defualt: 0.05", type="double", default=0.05)
 parser$add_argument("-fdr", action="store", dest="fdr", help="FDR threshold. Default: 0.05", type="double", default=0.05)
 parser$add_argument("-ild", action="store", dest="ild", help="Absolute Inclusion Level Difference threshold value. Default: 0.1", type="double", default=0.1)
