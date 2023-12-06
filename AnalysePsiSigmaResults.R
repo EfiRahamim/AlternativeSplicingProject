@@ -18,15 +18,15 @@ stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir))
 print(user_args)
 
 # # DEBUG Arguments
-# PSI_Sigma_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/NonSotredGTF/"
-# output_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/NonSotredGTF/"
+# PSI_Sigma_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/"
+# output_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/TM_Genes/"
 # output_dir_name <- NULL
 # output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
 # delta_PSI = 20
 # p_value = 0.05
 # fdr = 0.05
 # ncol_plot <- 3
-# novelSS = T
+# novelSS = F
 # gene_prefix = "MSTRG"
 # filter_tm <- T
 # tm_table <- "/private10/Projects/Efi/General/transmembrane_Nov23.csv"
@@ -58,14 +58,16 @@ full_df_list <- list()
 filtered_df_list <- list()
 comparisons <- c()
 for (dir in output_dirs){
+  result_file <- list.files(dir, pattern= output_file_name, full.names=T) # get result file
+  if (length(result_file) == 0){
+    next
+  }
   if (!is.null(output_dir_name) ){
     comparison <- basename(dirname(dir)) # get comparison groups
   } else {
     comparison <- basename(dir) # get comparison groups
   }
-  
   comparisons <- append(comparisons, comparison) # add comparison group to vector
-  result_file <- list.files(dir, pattern= output_file_name, full.names=T) # get result file
   df <- read.csv(result_file, sep='\t') # read result file
   # filter by TM proteins
   if (filter_tm){
