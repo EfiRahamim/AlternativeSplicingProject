@@ -1,6 +1,6 @@
 library(argparse)
 # CLI Arguments
-parser <- ArgumentParser(description='Filter PSI-Sigma initial results.\n The filter is according to: P_value, FDR and ΔPSI value.')
+parser <- ArgumentParser(description='Filter PSI-Sigma initial results.\n The filter is according to: P_value, FDR and ΔPSI value. Also calculate TPM of gene expression for each transcript.')
 parser$add_argument("-i", action="store", dest="PSI_Sigma_dir", help="Super directory of PSI-Sigma result (Where sub-directories of comparisons are located)")
 parser$add_argument("-o", action="store", dest="output_dir", help="Directory to store the output.")
 parser$add_argument("-dir_name", action="store", dest="output_dir_name", required=FALSE, help="The name of the actual directories of the results")
@@ -13,6 +13,9 @@ parser$add_argument("-gene_prefix", action="store", dest="gene_prefix", help="Pr
 parser$add_argument("-ncol", action="store", dest="ncol", help="Number of columns to plot in the volcano plots. default: 3", type="integer", default=3)
 parser$add_argument("--filter_by_TM", action="store_true", dest="filter_tm", help="Filter results by Trans-Membrane (TM) proteins")
 parser$add_argument("-tm", action="store", dest="tm_table", help="Path of TransMembrane Domains table (UniProt). Defualt: /private10/Projects/Efi/General/transmembrane_Nov23.csv", default="/private10/Projects/Efi/General/transmembrane_Nov23.csv")
+parser$add_argument("-salmon", action="store", dest="salmon_dir", help="Directory of salmon results.")
+parser$add_argument("-group_info", action="store", dest="group_info_file", help="Tab-delimetered file of 'Sample' and 'Group'. Header required.")
+
 user_args <- parser$parse_args()
 stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir))
 print(user_args)
@@ -30,6 +33,10 @@ print(user_args)
 # gene_prefix = "MSTRG"
 # filter_tm <- T
 # tm_table <- "/private10/Projects/Efi/General/transmembrane_Nov23.csv"
+# salmon_dir <- "/private10/Projects/Efi/CRG/GBM/Salmon_1.4.0_removeAdapts/"
+# salmon_suffix = ".quant.sf"
+# group_info_file <- "/private10/Projects/Efi/CRG/GBM/Salmon_1.4.0_removeAdapts/GroupInfo.txt" 
+
 
 # Arguments assignment
 PSI_Sigma_dir <- user_args$PSI_Sigma_dir
@@ -44,6 +51,9 @@ gene_prefix <- user_args$gene_prefix
 ncol_plot <- user_args$ncol
 filter_tm <- user_args$filter_tm
 tm_table <- user_args$tm_table
+salmon_dir <- user_args$salmon_dir
+salmon_suffix <- ".quant.sf"
+group_info_file <- user_args$group_info_file
 
 library(dplyr)
 library(ggplot2)
@@ -86,7 +96,41 @@ colnames(merged_results) <- c(colnames(full_df_list[[comparisons[1]]]), "Compari
 merged_results_filtered <- data.frame(matrix(nrow = 0, ncol = 15))
 colnames(merged_results_filtered) <- c(colnames(filtered_df_list[[comparisons[1]]]), "Comparison")
 
+# read Gene Expression data
+group_info_file <- "/private10/Projects/Efi/CRG/GBM/Salmon_1.4.0_removeAdapts/GroupInfo.txt" 
+salmon_files <- list.files(path=salmon_dir, pattern = salmon_suffix, full.names = T, recursive = T )
+col_names <- c("Name")
+merged_tpm <- data.frame(matrix(nrow = 0, ncol = length(col_names)))
+colnames(merged_tpm) <- col_names
+for (file in salmon_files){
+  df <- read.csv(file, sep ='\t', header = T)[,c(1,4)]
+  sample <- gsub(salmon_suffix, "",basename(file))
+  colnames(df)[2] <- sample
+  if (nrow(merged_tpm) == 0){
+    merged_tpm <- df
+  } else {
+    merged_tpm <- merge(merged_tpm, df, by = "Name")
+  }
+}
+# read GroupInfo data 
+group_info <- read.csv(group_info_file, sep='\t', header=T)
+groups <- unique(group_info$Group)
+for (group in groups){
+  samples <- subset(group_info, Group==group)$Sample
+  merged_tpm[[paste0("TPM_mean_",group)]] <- rowMeans(merged_tpm[,samples])
+}
+merged_tpm$FixedTranscript <- sub("\\..*", "", merged_tpm$Name)
+
 for (comparison in comparisons){
+  # add TPM value for each transcript in each group
+  groupA <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][1])
+  groupB <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][2])
+  filtered_df_list[[comparison]]$FixedTranscript <- gsub("Ex\\.|TSS\\.|Ex\\.TSS\\.", "", filtered_df_list[[comparison]]$Reference.Transcript)
+  filtered_df_list[[comparison]]$FixedTranscript <- sub("\\..*", "", filtered_df_list[[comparison]]$FixedTranscript)
+  filtered_df_list[[comparison]] <- merge(filtered_df_list[[comparison]],
+                                          merged_tpm[,c("FixedTranscript",groupA, groupB)],
+                                          by.x='FixedTranscript', by.y='FixedTranscript')
+  
   # write filtered results to csv file
   filtered_results_file <- file.path(output_dir, paste0("SplicingEventsFiltered-",comparison,"-PSI",delta_PSI,"_Pvalue", p_value,"_FDR", fdr,".csv"))
   write.csv(filtered_df_list[[comparison]], file=filtered_results_file, row.names = F) # write filtered results file
