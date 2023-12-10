@@ -7,6 +7,7 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
 parser.add_argument("-i", action='store', dest='input_dir', required=True, help="Input directory of genes directories")
 parser.add_argument("-l1", action='store', dest='lable1', required=True, help="Lable of first group (same order as in the rMATS analysis)")
 parser.add_argument("-l2", action='store', dest='lable2', required=True, help="Lable of second group (same order as in the rMATS analysis)")
+parser.add_argument('--PSIsigma', action='store_true', dest='psi_sigma', help='Set for PSI-Sigma tool results.')
 user_args = parser.parse_args()
 
 # activate conda environment: pybedtools (located in "/home/alu/rahamie4/anaconda3/envs/pybedtools/")
@@ -23,7 +24,10 @@ os.chdir(user_args.input_dir)
 # get list of absolut pathes of transcripts directories
 def getPaths(input_dir):
     #directories_pattern = input_dir+"*/*/*"
-    directories_pattern = os.path.join(input_dir,"*","*","*")
+    if user_args.psi_sigma:
+        directories_pattern = os.path.join(input_dir,"*","*","*","*")
+    else:
+        directories_pattern = os.path.join(input_dir,"*","*","*")
     directories = glob.glob(directories_pattern)
     pathes = [os.path.abspath(dir) for dir in directories if os.path.isdir(dir) and dir.find("sashimiplots") == -1]
     if pathes is None:
@@ -49,20 +53,20 @@ def run_DeepTMHMM(deeptmhmm, aa_path, tmhmm_dir, type,spliced=False):
     deeptmhmm_job = deeptmhmm.cli(args=cmd, machine='local')
     # create result dir according to gene ID and save results
     if spliced:
-        result_dir_path = os.path.join(tmhmm_dir,"Spliced_"+type)
+        result_dir_path = os.path.join(tmhmm_dir,"Exclusion_"+type)
     else:
-        result_dir_path = os.path.join(tmhmm_dir,"Full_"+type)
+        result_dir_path = os.path.join(tmhmm_dir,"Inclusion_"+type)
     print(f"Saving results in {result_dir_path}")
     deeptmhmm_job.save_files(result_dir_path)
     return result_dir_path
 
 # define type order - Normal/Tumor
-def getType(fullSeq_file):
+def getType(inclusionSeq_file):
     type=[]
-    if user_args.l1 in fullSeq_file:
-        type = [user_args.l1, user_args.l2]
-    elif user_args.l2 in fullSeq_file:
-        type = [user_args.l2, user_args.l1]
+    if user_args.lable1 in inclusionSeq_file:
+        type = [user_args.lable1, user_args.lable2]
+    elif user_args.lable2 in inclusionSeq_file:
+        type = [user_args.lable2, user_args.lable1]
     else:
         type=None
     return type
@@ -104,27 +108,33 @@ def runAnalyze(transcript_dir):
     #files = os.listdir(transcript_dir)
     files = get_absolute_file_paths(transcript_dir)
     print(f"Files found in {transcript_dir}:{files}")
-    # Search for full AA sequence fasta file
-    fullSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'fullAA' in file), None)
-    type=getType(fullSeq_file)
+    # Search for inclusion AA sequence fasta file
+    if user_args.psi_sigma:
+        inclusionSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'Inclusion' in file), None)
+    else:
+        inclusionSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'inclusionAA' in file), None)
+    type=getType(inclusionSeq_file)
     if type is None:
         print(f"Error in define types of {transcript_dir}. Skipping.")
         return
-    # run deepTMHMM on full sequence
-    tmhmm_fullSeq_path = run_DeepTMHMM(deeptmhmm,fullSeq_file,tmhmm_dir,type[0], spliced=False)
+    # run deepTMHMM on inclusion sequence
+    tmhmm_inclusionSeq_path = run_DeepTMHMM(deeptmhmm,inclusionSeq_file,tmhmm_dir,type[0], spliced=False)
     # check if full transcript has TM domain
-    if not check_TM(tmhmm_fullSeq_path):
+    if not check_TM(tmhmm_inclusionSeq_path):
         print(f"No TM domains has been found in {transcript_dir}.")
         with open('noTMdomain.txt', 'a') as f:
             f.write(transcript_dir + '\n')
         # delete transcript directory
-        print(f"Deleting directory {transcript_dir}...")
-        shutil.rmtree(transcript_dir, onerror=None)
+        # print(f"Deleting directory {transcript_dir}...")
+        # shutil.rmtree(transcript_dir, onerror=None)
         return
     # Search for spliced AA sequence fasta file
-    splicedSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'splicedAA' in file), None)
+    if user_args.psi_sigma:
+        exclusionSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'Exclusion' in file), None)
+    else:
+        exclusionSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'exclusionAA' in file), None)
     # run deepTMHMM on spliced sequence
-    tmhmm_splicedSeq_path = run_DeepTMHMM(deeptmhmm,splicedSeq_file,tmhmm_dir,type[1],spliced=True)
+    tmhmm_splicedSeq_path = run_DeepTMHMM(deeptmhmm,exclusionSeq_file,tmhmm_dir,type[1],spliced=True)
 
 
 if __name__ == '__main__':
@@ -133,7 +143,7 @@ if __name__ == '__main__':
     # get absolute paths of transcripts directories
     pathes = getPaths(user_args.input_dir)
     print(f"Directories that has been found in {user_args.input_dir}:\n{pathes}")
-    pool = multiprocessing.Pool(processes=1) # deepTMHMM is very costly. Not recommanded to run in parallel
+    pool = multiprocessing.Pool(processes=2) # deepTMHMM is very costly. Not recommanded to run in parallel
     pool.map(runAnalyze, pathes)
     pool.close()
     pool.join()
