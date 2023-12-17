@@ -121,7 +121,7 @@ for (group in groups){
 merged_tpm$FixedTranscript <- sub("\\..*", "", merged_tpm$Name)
 target_exons_list <- list() # for Vann diagram
 for (comparison in comparisons){
-  add TPM value for each transcript in each group
+  #add TPM value for each transcript in each group
   groupA <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][1])
   groupB <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][2])
   filtered_df_list[[comparison]]$FixedTranscript <- gsub("Ex\\.|TSS\\.|Ex\\.TSS\\.", "", filtered_df_list[[comparison]]$Reference.Transcript)
