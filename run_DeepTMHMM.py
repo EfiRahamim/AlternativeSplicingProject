@@ -18,9 +18,7 @@ user_args = parser.parse_args()
 
 # global variables
 #input_dir = "/private5/Projects/Efi/AS/pipeline_tests/tmp_results/"
-
-os.chdir(user_args.input_dir)
-
+true_TM_events = [] # list of true TM splicing events ID
 # get list of absolut pathes of transcripts directories
 def getPaths(input_dir):
     #directories_pattern = input_dir+"*/*/*"
@@ -95,19 +93,25 @@ def check_TM(result_dir_path):
             return True
 
 # run the analyze steps on the current transcript directory
-def runAnalyze(transcript_dir):
-    print(f"Analyzing transcript: {transcript_dir}")
+def runAnalyze(event_dir):
+    global true_TM_events
+    print(f"Analyzing event: {event_dir}")
     type=[]
     # create 'deepTMHMM' results directory
-    tmhmm_dir = os.path.join(transcript_dir,"deepTMHMM")
-    if os.path.isdir(tmhmm_dir):
-        print(f"Transcript {transcript_dir} was already checked. Results can be found at {tmhmm_dir}.")
+    tmhmm_dir = os.path.join(event_dir,"deepTMHMM")
+    if os.path.isdir(tmhmm_dir) and len(os.listdir(tmhmm_dir)) != 0:
+        print(f"Event {event_dir} was already checked. Results can be found at {tmhmm_dir}.")
+        if len(os.listdir(tmhmm_dir)) == 2:
+            true_TM_events.append(os.path.basename(event_dir))
+            with open ('True_TM_events.txt', 'a') as f:
+                f.write(os.path.basename(event_dir)+'\n')
         return
-    os.mkdir(tmhmm_dir)
+    if not os.path.isdir(tmhmm_dir):
+        os.mkdir(tmhmm_dir)
     # Get all files in the directory
     #files = os.listdir(transcript_dir)
-    files = get_absolute_file_paths(transcript_dir)
-    print(f"Files found in {transcript_dir}:{files}")
+    files = get_absolute_file_paths(event_dir)
+    print(f"Files found in {event_dir}:{files}")
     # Search for inclusion AA sequence fasta file
     if user_args.psi_sigma:
         inclusionSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'Inclusion' in file), None)
@@ -115,18 +119,18 @@ def runAnalyze(transcript_dir):
         inclusionSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'inclusionAA' in file), None)
     type=getType(inclusionSeq_file)
     if type is None:
-        print(f"Error in define types of {transcript_dir}. Skipping.")
+        print(f"Error in define types of {event_dir}. Skipping.")
         return
     # run deepTMHMM on inclusion sequence
     tmhmm_inclusionSeq_path = run_DeepTMHMM(deeptmhmm,inclusionSeq_file,tmhmm_dir,type[0], spliced=False)
-    # check if full transcript has TM domain
+    # check if inclusion transcript has TM domain
     if not check_TM(tmhmm_inclusionSeq_path):
-        print(f"No TM domains has been found in {transcript_dir}.")
+        print(f"No TM domains has been found in {event_dir}.")
         with open('noTMdomain.txt', 'a') as f:
-            f.write(transcript_dir + '\n')
+            f.write(event_dir + '\n')
         # delete transcript directory
-        # print(f"Deleting directory {transcript_dir}...")
-        # shutil.rmtree(transcript_dir, onerror=None)
+        #print(f"Deleting directory {event_dir}...")
+        #shutil.rmtree(event_dir, onerror=None)
         return
     # Search for spliced AA sequence fasta file
     if user_args.psi_sigma:
@@ -135,9 +139,15 @@ def runAnalyze(transcript_dir):
         exclusionSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'exclusionAA' in file), None)
     # run deepTMHMM on spliced sequence
     tmhmm_splicedSeq_path = run_DeepTMHMM(deeptmhmm,exclusionSeq_file,tmhmm_dir,type[1],spliced=True)
+    true_TM_events.append(os.path.basename(event_dir))
+    with open ('True_TM_events.txt', 'a') as f:
+        f.write(os.path.basename(event_dir)+'\n')
+
+
 
 
 if __name__ == '__main__':
+    os.chdir(user_args.input_dir)
     # load DeepTMHMM tool
     deeptmhmm = biolib.load('DTU/DeepTMHMM')
     # get absolute paths of transcripts directories
@@ -148,6 +158,10 @@ if __name__ == '__main__':
     pool.close()
     pool.join()
     print("Done proccessing DeepTMHMM on samples.")
+    print(f"Splicing events with true TM domains: {true_TM_events}")
+    # with open ('True_TM_events.txt', 'w') as f:
+    #     f.write('\n'.join(true_TM_events))
+
 
 
 
