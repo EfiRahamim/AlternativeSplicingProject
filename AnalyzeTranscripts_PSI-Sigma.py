@@ -254,6 +254,8 @@ def run_with_GTF(index,row):
     else:
       files_dir = createDir(output_dir, row['Gene.Symbol'], transcript_id, row['Event.Type'], index)
       SaveSeqAsFastaFiles(AA_inclusion_seq, AA_exclusion_seq, files_dir, row)
+      row['InclusionAAseq'] = str(AA_inclusion_seq)
+      row['ExclusionAAseq'] = str(AA_exclusion_seq)
   else:
     row['Exon in CDS?'] = 'no'
   return row
@@ -274,6 +276,9 @@ merged_results['Transcript found?'] = 'NA'
 merged_results['Exon in transcript?'] = 'NA'
 merged_results['Exon in CDS?'] = 'NA'
 merged_results['Exon devide by 3?'] = 'NA'
+merged_results['InclusionAAseq'] = 'NA'
+merged_results['ExclusionAAseq'] = 'NA'
+
 # global dictionaries
 transcripts_dict = {}
 cds_dict = {}
@@ -285,7 +290,8 @@ pool.close()
 pool.join()
 # write updated results file
 merged_results_updated = pd.DataFrame(updated_rows)
-merged_results_updated.to_csv("/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/TM_Genes/DMSO_vs_H3B8800_Analyzed.csv", index=True)
+updated_results_file = os.path.join(output_dir, group_A+'_vs_'+group_B+'_analyzed.csv')
+merged_results_updated.to_csv(updated_results_file, index=True)
 # print splicing events locations to the screen
 print(f"Found transcripts: {(merged_results_updated['Transcript found?']=='yes').sum()} out of {merged_results_updated.shape[0]}")
 print(f"Exon in transcripts: {(merged_results_updated['Exon in transcript?']=='yes').sum()} out of {(merged_results_updated['Transcript found?']=='yes').sum()}")
