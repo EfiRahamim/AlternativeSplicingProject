@@ -21,8 +21,8 @@ stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir))
 print(user_args)
 
 # # DEBUG Arguments
-# PSI_Sigma_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/"
-# output_dir <- "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/TM_Genes/"
+# PSI_Sigma_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/PSI-Sigma/Melanoma/GencodeGTF/Results/"
+# output_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/PSI-Sigma/Melanoma/GencodeGTF/Results/"
 # output_dir_name <- NULL
 # output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
 # delta_PSI = 20
@@ -31,11 +31,11 @@ print(user_args)
 # ncol_plot <- 3
 # novelSS = F
 # gene_prefix = "MSTRG"
-# filter_tm <- T
+# filter_tm <- F
 # tm_table <- "/private10/Projects/Efi/General/transmembrane_Nov23.csv"
-# salmon_dir <- "/private10/Projects/Efi/CRG/GBM/Salmon_1.4.0_removeAdapts/"
+# salmon_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/Salmon_1.4.0_removeAdapts/"
 # salmon_suffix = ".quant.sf"
-# group_info_file <- "/private10/Projects/Efi/CRG/GBM/Salmon_1.4.0_removeAdapts/GroupInfo.txt" 
+# group_info_file <- "/private10/Projects/Efi/CRG/SF3B1_WT/Salmon_1.4.0_removeAdapts/GroupInfo_Melanoma.txt"
 
 
 # Arguments assignment
@@ -97,7 +97,6 @@ merged_results_filtered <- data.frame(matrix(nrow = 0, ncol = 15))
 colnames(merged_results_filtered) <- c(colnames(filtered_df_list[[comparisons[1]]]), "Comparison")
 
 # read Gene Expression data
-group_info_file <- "/private10/Projects/Efi/CRG/GBM/Salmon_1.4.0_removeAdapts/GroupInfo.txt" 
 salmon_files <- list.files(path=salmon_dir, pattern = salmon_suffix, full.names = T, recursive = T )
 col_names <- c("Name")
 merged_tpm <- data.frame(matrix(nrow = 0, ncol = length(col_names)))
@@ -120,9 +119,9 @@ for (group in groups){
   merged_tpm[[paste0("TPM_mean_",group)]] <- rowMeans(merged_tpm[,samples])
 }
 merged_tpm$FixedTranscript <- sub("\\..*", "", merged_tpm$Name)
-
+target_exons_list <- list() # for Vann diagram
 for (comparison in comparisons){
-  # add TPM value for each transcript in each group
+  add TPM value for each transcript in each group
   groupA <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][1])
   groupB <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][2])
   filtered_df_list[[comparison]]$FixedTranscript <- gsub("Ex\\.|TSS\\.|Ex\\.TSS\\.", "", filtered_df_list[[comparison]]$Reference.Transcript)
@@ -130,14 +129,17 @@ for (comparison in comparisons){
   filtered_df_list[[comparison]] <- merge(filtered_df_list[[comparison]],
                                           merged_tpm[,c("FixedTranscript",groupA, groupB)],
                                           by.x='FixedTranscript', by.y='FixedTranscript')
-  
+
   # write filtered results to csv file
   filtered_results_file <- file.path(output_dir, paste0("SplicingEventsFiltered-",comparison,"-PSI",delta_PSI,"_Pvalue", p_value,"_FDR", fdr,".csv"))
   write.csv(filtered_df_list[[comparison]], file=filtered_results_file, row.names = F) # write filtered results file
   full_df_list[[comparison]]$Comparison <- comparison
   filtered_df_list[[comparison]]$Comparison <- comparison
   merged_results <- rbind(merged_results, full_df_list[[comparison]])
-  merged_results_filtered <- rbind(merged_results_filtered, filtered_df_list[[comparison]])
+  merged_results_filtered <- rbind(merged_results_filtered, filtered_df_list[[comparison]]%>%select(-groupA, -groupB))
+  target_exons_list[[comparison]] <- paste0(filtered_df_list[[comparison]]$Target.Exon,
+                                            filtered_df_list[[comparison]]$FixedTranscript,
+                                            filtered_df_list[[comparison]]$Event.Type)
 }
 
 # create volcano plots
@@ -166,6 +168,21 @@ filtered_splicing_event_barplot <- ggplot(merged_results_filtered, aes(y=Compari
        subtitle = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value), y = "Count")
 filtered_splicing_event_barplot
 ggsave(filename="SignificantSplicingEvents.png", plot = filtered_splicing_event_barplot, path=output_dir, width = 10, height = 6, dpi = 300)
+
+# create Vann diagram of splicing events interesections
+num_groups <- length(target_exons_list)
+circle_colors <- rainbow(num_groups) # Generate colors dynamically based on the number of groups
+palette <- brewer.pal(num_groups, "Dark2")
+plot_path = file.path(output_dir, "VennDiagram.png")
+venn.diagram(target_exons_list, category.names = comparisons, 
+             filename=plot_path,
+             disable.logging=T,
+             height=3000, width=4500, resolution=500,
+             col = palette,
+             main = "Division of significant splicing events among different comparisons",
+             main.cex=1.6,#,
+             sub = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value)
+)
 
 # create plots without novel transcripts
 if (novelSS){
