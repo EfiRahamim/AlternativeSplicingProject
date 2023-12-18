@@ -132,7 +132,7 @@ for (comparison in comparisons){
 
   # write filtered results to csv file
   filtered_results_file <- file.path(output_dir, paste0("SplicingEventsFiltered-",comparison,"-PSI",delta_PSI,"_Pvalue", p_value,"_FDR", fdr,".csv"))
-  write.csv(filtered_df_list[[comparison]], file=filtered_results_file, row.names = F) # write filtered results file
+  #write.csv(filtered_df_list[[comparison]], file=filtered_results_file, row.names = F) # write filtered results file
   full_df_list[[comparison]]$Comparison <- comparison
   filtered_df_list[[comparison]]$Comparison <- comparison
   merged_results <- rbind(merged_results, full_df_list[[comparison]])
@@ -183,6 +183,17 @@ venn.diagram(target_exons_list, category.names = comparisons,
              main.cex=1.6,#,
              sub = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value)
 )
+
+# creat BED file of Intron Retention events
+ri_exons <- merged_results_filtered[merged_results_filtered$Event.Type=='IR' | merged_results_filtered$Event.Type=='IR (overlapping region)', "Target.Exon"]
+BED_ri_exons <- strsplit(ri_exons, "[:-]")
+BED_ri_exons_matrix <- do.call(rbind, BED_ri_exons)
+BED_ri_exons_df <- as.data.frame(BED_ri_exons_matrix)
+colnames(BED_ri_exons_df) <- c("chr", "start", "end")
+BED_ri_exons_df$start <- as.numeric(as.character(BED_ri_exons_df$start))
+BED_ri_exons_df$end <- as.numeric(as.character(BED_ri_exons_df$end))
+sorted_BED_ri_exons_df <- BED_ri_exons_df[order(BED_ri_exons_df$chr, BED_ri_exons_df$start, BED_ri_exons_df$end), ]
+write.table(sorted_BED_ri_exons_df, file = file.path(output_dir,"IR_events.sorted.bed"), sep = "\t", col.names = FALSE, row.names = FALSE, quote = FALSE) # Write the sorted matrix into a BED file
 
 # create plots without novel transcripts
 if (novelSS){
