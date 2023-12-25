@@ -21,8 +21,8 @@ stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir))
 print(user_args)
 
 # # DEBUG Arguments
-# PSI_Sigma_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/PSI-Sigma/Melanoma/GencodeGTF/Results/"
-# output_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/PSI-Sigma/Melanoma/GencodeGTF/Results/"
+# PSI_Sigma_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/"
+# output_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/Results/"
 # output_dir_name <- NULL
 # output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
 # delta_PSI = 20
@@ -33,9 +33,9 @@ print(user_args)
 # gene_prefix = "MSTRG"
 # filter_tm <- F
 # tm_table <- "/private10/Projects/Efi/General/transmembrane_Nov23.csv"
-# salmon_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/Salmon_1.4.0_removeAdapts/"
+# salmon_dir <- "/private10/Projects/Efi/AML/Salmon_1.4.0/"
 # salmon_suffix = ".quant.sf"
-# group_info_file <- "/private10/Projects/Efi/CRG/SF3B1_WT/Salmon_1.4.0_removeAdapts/GroupInfo_Melanoma.txt"
+# group_info_file <- "/private10/Projects/Efi/AML/Salmon_1.4.0/SRSF2-6H-Info.txt"
 
 
 # Arguments assignment
@@ -57,6 +57,9 @@ group_info_file <- user_args$group_info_file
 
 library(dplyr)
 library(ggplot2)
+library(RColorBrewer)
+library(VennDiagram)
+
 
 # read results files into list of data frames
 if (!is.null(output_dir_name) ){
@@ -101,9 +104,15 @@ salmon_files <- list.files(path=salmon_dir, pattern = salmon_suffix, full.names 
 col_names <- c("Name")
 merged_tpm <- data.frame(matrix(nrow = 0, ncol = length(col_names)))
 colnames(merged_tpm) <- col_names
+# read GroupInfo data 
+group_info <- read.csv(group_info_file, sep='\t', header=T)
+groups <- unique(group_info$Group)
 for (file in salmon_files){
-  df <- read.csv(file, sep ='\t', header = T)[,c(1,4)]
   sample <- gsub(salmon_suffix, "",basename(file))
+  if (!(sample %in% group_info$Sample)){
+    next
+  }
+  df <- read.csv(file, sep ='\t', header = T)[,c(1,4)]
   colnames(df)[2] <- sample
   if (nrow(merged_tpm) == 0){
     merged_tpm <- df
@@ -111,9 +120,6 @@ for (file in salmon_files){
     merged_tpm <- merge(merged_tpm, df, by = "Name")
   }
 }
-# read GroupInfo data 
-group_info <- read.csv(group_info_file, sep='\t', header=T)
-groups <- unique(group_info$Group)
 for (group in groups){
   samples <- subset(group_info, Group==group)$Sample
   merged_tpm[[paste0("TPM_mean_",group)]] <- rowMeans(merged_tpm[,samples])
@@ -132,7 +138,7 @@ for (comparison in comparisons){
 
   # write filtered results to csv file
   filtered_results_file <- file.path(output_dir, paste0("SplicingEventsFiltered-",comparison,"-PSI",delta_PSI,"_Pvalue", p_value,"_FDR", fdr,".csv"))
-  #write.csv(filtered_df_list[[comparison]], file=filtered_results_file, row.names = F) # write filtered results file
+  write.csv(filtered_df_list[[comparison]], file=filtered_results_file, row.names = F) # write filtered results file
   full_df_list[[comparison]]$Comparison <- comparison
   filtered_df_list[[comparison]]$Comparison <- comparison
   merged_results <- rbind(merged_results, full_df_list[[comparison]])
@@ -177,23 +183,26 @@ plot_path = file.path(output_dir, "VennDiagram.png")
 venn.diagram(target_exons_list, category.names = comparisons, 
              filename=plot_path,
              disable.logging=T,
-             height=3000, width=4500, resolution=500,
+             force.unique = T,
+             height=2000, width=3000, resolution=250,
              col = palette,
+             fill = c(alpha(palette, 0.3)),
              main = "Division of significant splicing events among different comparisons",
              main.cex=1.6,#,
              sub = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value)
 )
 
 # creat BED file of Intron Retention events
-ri_exons <- merged_results_filtered[merged_results_filtered$Event.Type=='IR' | merged_results_filtered$Event.Type=='IR (overlapping region)', "Target.Exon"]
-BED_ri_exons <- strsplit(ri_exons, "[:-]")
-BED_ri_exons_matrix <- do.call(rbind, BED_ri_exons)
-BED_ri_exons_df <- as.data.frame(BED_ri_exons_matrix)
-colnames(BED_ri_exons_df) <- c("chr", "start", "end")
-BED_ri_exons_df$start <- as.numeric(as.character(BED_ri_exons_df$start))
-BED_ri_exons_df$end <- as.numeric(as.character(BED_ri_exons_df$end))
-sorted_BED_ri_exons_df <- BED_ri_exons_df[order(BED_ri_exons_df$chr, BED_ri_exons_df$start, BED_ri_exons_df$end), ]
-write.table(sorted_BED_ri_exons_df, file = file.path(output_dir,"IR_events.sorted.bed"), sep = "\t", col.names = FALSE, row.names = FALSE, quote = FALSE) # Write the sorted matrix into a BED file
+# groupA_ri_exons <- merged_results_filtered[(merged_results_filtered$Event.Type=='IR' | merged_results_filtered$Event.Type=='IR (overlapping region)') & merged_results_filtered$ΔPSI.... > 0, "Target.Exon"]
+# BED_ri_exons <- strsplit(groupA_ri_exons, "[:-]")
+# BED_ri_exons_matrix <- do.call(rbind, BED_ri_exons)
+# BED_ri_exons_df <- as.data.frame(BED_ri_exons_matrix)
+# BED_ri_exons_df <- unique(BED_ri_exons_df)
+# colnames(BED_ri_exons_df) <- c("chr", "start", "end")
+# BED_ri_exons_df$start <- as.numeric(as.character(BED_ri_exons_df$start))
+# BED_ri_exons_df$end <- as.numeric(as.character(BED_ri_exons_df$end))
+# sorted_BED_ri_exons_df <- BED_ri_exons_df[order(BED_ri_exons_df$chr, BED_ri_exons_df$start, BED_ri_exons_df$end), ]
+# write.table(sorted_BED_ri_exons_df, file = file.path(output_dir,"IR_events.sorted.bed"), sep = "\t", col.names = FALSE, row.names = FALSE, quote = FALSE) # Write the sorted matrix into a BED file
 
 # create plots without novel transcripts
 if (novelSS){
