@@ -28,11 +28,11 @@ group_A = user_args.group_A
 group_B = user_args.group_B
 
 # DEBUG Arguments
-# input_file = "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/TM_Genes/SplicingEventsFiltered-DMSO_vs_H3B8800-PSI20_Pvalue0.05_FDR0.05.csv"
-# group_A = 'DMSO'
-# group_B = 'H3B880'
-# output_dir = "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/TM_Genes/"
-# gtf_map = "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/DMSO_vs_H3B8800/gencode.v28.annotation.gtf.mapping.txt"
+# input_file = "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/TM_Results/SplicingEventsFiltered-NoTreatment_vs_PladB-PSI20_Pvalue0.05_FDR0.05.csv"
+# group_A = 'NoTreatment'
+# group_B = 'PladB'
+# output_dir = "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/TM_Results/SplicingEventsFiles/NoTreatment_vs_PladB"
+# gtf_map = "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/NoTreatment_vs_PladB/gencode.v28.annotation.gtf.mapping.txt"
 # gtf_file = "/private10/Projects/Efi/General/gencode.v28.annotation.gtf"
 
 def getExonByRow(row):
@@ -159,6 +159,8 @@ def getAminoAcidSeq(inclusion_seq_object, exclusion_seq_object, transcript_id):
     return None, None
   return AA_inclusion_seq, AA_exclusion_seq 
 def createDir (output_dir, gene_name, transcript_id, splicing_event, index):
+  if not os.path.isdir(output_dir):
+    os.mkdir(output_dir)
   # modify splicing event name to be used in file system paths
   splicing_event = splicing_event.replace("|", "_") # for 'TSS|' cases
   if splicing_event == 'IR (overlapping region)':
@@ -270,7 +272,7 @@ gene_map.columns = ['Transcript', 'Gene.Symbol', 'Strand']
 gene_map.drop('Transcript', axis=1, inplace=True)
 gene_map.drop_duplicates(inplace=True)
 merged_results = pd.merge(results, gene_map, on='Gene.Symbol', how='inner') # add strand to results
-merged_results = merged_results.rename(columns={merged_results.columns[8]: 'dPSI'}) # rename 'delta PSI' column 
+merged_results = merged_results.rename(columns={merged_results.columns[9]: 'dPSI'}) # rename 'delta PSI' column 
 # add columns of exon location
 merged_results['Transcript found?'] = 'NA'
 merged_results['Exon in transcript?'] = 'NA'
