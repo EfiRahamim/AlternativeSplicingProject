@@ -44,16 +44,18 @@ def get_absolute_file_paths(directory):
 
 # run deepTMHMM
 def run_DeepTMHMM(deeptmhmm, aa_path, tmhmm_dir, type,spliced=False):
+    # create result dir according to gene ID and save results
+    if spliced:
+        result_dir_path = os.path.join(tmhmm_dir,"Exclusion_"+type)
+        result_prefix = 'Exclusion'
+    else:
+        result_dir_path = os.path.join(tmhmm_dir,"Inclusion_"+type)
+        result_prefix = 'Inclusion'
     # create command for the tool
     cmd = '--fasta '+aa_path
     print("Sending command to deeptmhmm.")
     # run DeepTMHMM
-    deeptmhmm_job = deeptmhmm.cli(args=cmd, machine='local')
-    # create result dir according to gene ID and save results
-    if spliced:
-        result_dir_path = os.path.join(tmhmm_dir,"Exclusion_"+type)
-    else:
-        result_dir_path = os.path.join(tmhmm_dir,"Inclusion_"+type)
+    deeptmhmm_job = deeptmhmm.cli(args=cmd, machine='local',result_prefix='my_help_testr' )
     print(f"Saving results in {result_dir_path}")
     deeptmhmm_job.save_files(result_dir_path)
     return result_dir_path
