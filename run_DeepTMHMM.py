@@ -121,6 +121,8 @@ def runAnalyze(event_dir):
     if type is None:
         print(f"Error in define types of {event_dir}. Skipping.")
         return
+    # load DeepTMHMM tool
+    deeptmhmm = biolib.load('DTU/DeepTMHMM')
     # run deepTMHMM on inclusion sequence
     tmhmm_inclusionSeq_path = run_DeepTMHMM(deeptmhmm,inclusionSeq_file,tmhmm_dir,type[0], spliced=False)
     # check if inclusion transcript has TM domain
@@ -149,7 +151,7 @@ def runAnalyze(event_dir):
 if __name__ == '__main__':
     os.chdir(user_args.input_dir)
     # load DeepTMHMM tool
-    deeptmhmm = biolib.load('DTU/DeepTMHMM')
+    #deeptmhmm = biolib.load('DTU/DeepTMHMM')
     # get absolute paths of transcripts directories
     pathes = getPaths(user_args.input_dir)
     print(f"Directories that has been found in {user_args.input_dir}:\n{pathes}")
