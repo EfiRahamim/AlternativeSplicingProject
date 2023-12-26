@@ -105,6 +105,9 @@ def runAnalyze(event_dir):
             true_TM_events.append(os.path.basename(event_dir))
             with open ('True_TM_events.txt', 'a') as f:
                 f.write(os.path.basename(event_dir)+'\n')
+        elif len(os.listdir(tmhmm_dir)) == 1:
+            with open('noTMdomain.txt', 'a') as f:
+                f.write(event_dir + '\n')
         return
     if not os.path.isdir(tmhmm_dir):
         os.mkdir(tmhmm_dir)
