@@ -21,9 +21,9 @@ stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir))
 print(user_args)
 
 # # DEBUG Arguments
-# PSI_Sigma_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/"
-# output_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/Results/"
-# output_dir_name <- NULL
+# PSI_Sigma_dir <- "/private10/Projects/Efi/ArielBashari/PSI-Sigma_gencodeGTF/"
+# output_dir <- "/private10/Projects/Efi/ArielBashari/PSI-Sigma_gencodeGTF/Results_withTPM/"
+# output_dir_name <- "Output_noFilter"
 # output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
 # delta_PSI = 20
 # p_value = 0.05
@@ -33,9 +33,9 @@ print(user_args)
 # gene_prefix = "MSTRG"
 # filter_tm <- F
 # tm_table <- "/private10/Projects/Efi/General/transmembrane_Nov23.csv"
-# salmon_dir <- "/private10/Projects/Efi/AML/Salmon_1.4.0/"
+# salmon_dir <- "/private10/Projects/Efi/ArielBashari/Salmon_1.4.0_removeAdapts/"
 # salmon_suffix = ".quant.sf"
-# group_info_file <- "/private10/Projects/Efi/AML/Salmon_1.4.0/SRSF2-6H-Info.txt"
+# group_info_file <- "/private10/Projects/Efi/ArielBashari/Salmon_1.4.0_removeAdapts/GroupInfo.txt"
 
 
 # Arguments assignment
@@ -123,17 +123,21 @@ for (file in salmon_files){
 for (group in groups){
   samples <- subset(group_info, Group==group)$Sample
   merged_tpm[[paste0("TPM_mean_",group)]] <- rowMeans(merged_tpm[,samples])
+  merged_tpm[[paste0("TPM_std_",group)]] <- apply(merged_tpm[,samples], 1, sd)
 }
 merged_tpm$FixedTranscript <- sub("\\..*", "", merged_tpm$Name)
 target_exons_list <- list() # for Vann diagram
 for (comparison in comparisons){
   #add TPM value for each transcript in each group
-  groupA <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][1])
-  groupB <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][2])
+  TPM_mean_groupA <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][1])
+  TPM_mean_groupB <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][2])
+  TPM_std_groupA <- paste0("TPM_std_", strsplit(comparison, "_vs_")[[1]][1])
+  TPM_std_groupB <- paste0("TPM_std_", strsplit(comparison, "_vs_")[[1]][2])
+  
   filtered_df_list[[comparison]]$FixedTranscript <- gsub("Ex\\.|TSS\\.|Ex\\.TSS\\.", "", filtered_df_list[[comparison]]$Reference.Transcript)
   filtered_df_list[[comparison]]$FixedTranscript <- sub("\\..*", "", filtered_df_list[[comparison]]$FixedTranscript)
   filtered_df_list[[comparison]] <- merge(filtered_df_list[[comparison]],
-                                          merged_tpm[,c("FixedTranscript",groupA, groupB)],
+                                          merged_tpm[,c("FixedTranscript",TPM_mean_groupA, TPM_mean_groupB,TPM_std_groupA,TPM_std_groupB)],
                                           by.x='FixedTranscript', by.y='FixedTranscript')
 
   # write filtered results to csv file
@@ -142,7 +146,7 @@ for (comparison in comparisons){
   full_df_list[[comparison]]$Comparison <- comparison
   filtered_df_list[[comparison]]$Comparison <- comparison
   merged_results <- rbind(merged_results, full_df_list[[comparison]])
-  merged_results_filtered <- rbind(merged_results_filtered, filtered_df_list[[comparison]]%>%select(-groupA, -groupB))
+  merged_results_filtered <- rbind(merged_results_filtered, filtered_df_list[[comparison]]%>%select(-TPM_mean_groupA, -TPM_mean_groupB, -TPM_std_groupA, -TPM_std_groupB))
   target_exons_list[[comparison]] <- paste0(filtered_df_list[[comparison]]$Target.Exon,
                                             filtered_df_list[[comparison]]$FixedTranscript,
                                             filtered_df_list[[comparison]]$Event.Type)
