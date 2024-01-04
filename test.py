@@ -24,10 +24,10 @@ def getExonByRow(row):
   #print(f"Region seq request: {server+ext_region}")
   r_r = requests.get(server+ext_region, headers={ "Content-Type" : "text/plain"}) 
   if not r_r.ok:
-    #r_r.raise_for_status()
-    #sys.exit
-    print(f"Error in getting exon by regions. Skipping.")
-    return None
+    print(f"Error in getting exon by regions: {server+ext_region}. Skipping.")
+    r_r.raise_for_status()
+    sys.exit
+    #return None
   exon = r_r.text.upper()
   return exon
 def getExonByRegions(chr, start, end, strand_sign):
@@ -42,6 +42,7 @@ def getExonByRegions(chr, start, end, strand_sign):
   #print(f"Region seq request: {server+ext_region}")
   r_r = requests.get(server+ext_region, headers={ "Content-Type" : "text/plain"}) 
   if not r_r.ok:
+    print(f"Error in getting exon by regions: {server+ext_region}. Skipping.")
     r_r.raise_for_status()
     sys.exit
     # print(f"Error in getting exon by regions. Skipping.")
@@ -120,17 +121,17 @@ def getCDSFromGTF (transcript_id, chr):
       break
   print(f"CDS of {transcript_id}: {len(cds_seq)} nucleotides.")
   return cds_seq
-def getAminoAcidSeq(inclusion_seq_object, exclusion_seq_object, index):
+def getAminoAcidSeq(inclusion_seq_object, exclusion_seq_object, transcript_id):
   # create AA sequences
   try:
       AA_inclusion_seq = inclusion_seq_object.translate(cds=True) 
   except:
-    print(f"Error in translating inclusion seq of event ID {index}. Skipping")
+    print(f"Error in translating inclusion seq of transcript {transcript_id}. Skipping.")
     return None, None
   try:
       AA_exclusion_seq = exclusion_seq_object.translate(to_stop=True) # translation is terminated at the first in frame stop codon
   except:
-    print(f"Error in translating exclusion seq of event ID {index}. Skipping.")
+    print(f"Error in translating exclusion seq of transcript {transcript_id}. Skipping.")
     return None, None
   return AA_inclusion_seq, AA_exclusion_seq 
 def createDir (output_dir, gene_name, transcript_id, splicing_event, index):
@@ -222,7 +223,7 @@ def run_with_GTF(index,row):
     inclusion_seq = cds_seq
     exclusion_seq = cds_seq.replace(exon_seq, "")
     # translate RNA sequences into protein
-    AA_inclusion_seq, AA_exclusion_seq = getAminoAcidSeq(Seq(inclusion_seq), Seq(exclusion_seq), index)
+    AA_inclusion_seq, AA_exclusion_seq = getAminoAcidSeq(Seq(inclusion_seq), Seq(exclusion_seq), transcript_id)
     if AA_inclusion_seq == None or AA_exclusion_seq == None:
         return row
     else:
@@ -234,10 +235,10 @@ def run_with_GTF(index,row):
 
 start_time = time.time()
 server="https://rest.ensembl.org"
-input_file = "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/SplicingEventsFiltered-DMSO_vs_H3B8800-PSI20_Pvalue0.05_FDR0.05.csv"
+input_file = "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/TM_Genes/SplicingEventsFiltered-DMSO_vs_H3B8800-PSI20_Pvalue0.05_FDR0.05.csv"
 group_A = 'DMSO'
 group_B = 'H3B880'
-output_dir = "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/DMSO_vs_H3B8800/"
+output_dir = "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/TM_Genes/"
 gtf_map = "/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/DMSO_vs_H3B8800/gencode.v28.annotation.gtf.mapping.txt"
 gtf_file = "/private10/Projects/Efi/General/gencode.v28.annotation.gtf"
 results = pd.read_csv(input_file, index_col=False)
@@ -259,12 +260,12 @@ updated_rows = pool.starmap(run_with_GTF,merged_results.iterrows())
 pool.close()
 pool.join()
 merged_results_updated = pd.DataFrame(updated_rows)
-merged_results_updated.to_csv("/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/DMSO_vs_H3B8800_Analyzed.csv", index=True)
+merged_results_updated.to_csv("/private10/Projects/Efi/CRG/GBM/PSI-Sigma/GencodeGTF/TM_Genes/DMSO_vs_H3B8800_Analyzed.csv", index=True)
 print(f"Found transcripts: {(merged_results_updated['Transcript found?']=='yes').sum()} out of {merged_results_updated.shape[0]}")
 print(f"Exon in transcripts: {(merged_results_updated['Exon in transcript?']=='yes').sum()} out of {(merged_results_updated['Transcript found?']=='yes').sum()}")
 print(f"Exon in CDS: {(merged_results_updated['Exon in CDS?']=='yes').sum()} out of {(merged_results_updated['Exon in transcript?']=='yes').sum()}")
 print(f"Exon devide by 3: {(merged_results_updated['Exon devide by 3?']=='yes').sum()} out of {(merged_results_updated['Exon in CDS?']=='yes').sum()}")
 end_time = time.time()
 total_time = end_time-start_time
-print(f"Execution time: ~{int(total_time)/60} minutes (~{int(total_time)/3600} hours).")
+print(f"Execution time: ~{int(total_time)/60:.2f} minutes (~{int(total_time)/3600:.2f} hours).")
 
