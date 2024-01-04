@@ -33,8 +33,8 @@ print(user_args)
 # gene_prefix = "MSTRG"
 # filter_tm <- F
 # tm_table <- "/private10/Projects/Efi/General/transmembrane_Nov23.csv"
-# salmon_dir <- "/private10/Projects/Efi/ArielBashari/Salmon_1.4.0_removeAdapts/"
-# salmon_suffix = ".quant.sf"
+# salmon_dir <- "/private10/Projects/Efi/ArielBashari/Salmon_1.4.0_gencode_v28/ResultFiles/"
+# salmon_suffix = ".quant.genes.sf"
 # group_info_file <- "/private10/Projects/Efi/ArielBashari/Salmon_1.4.0_removeAdapts/GroupInfo.txt"
 
 
@@ -52,7 +52,7 @@ ncol_plot <- user_args$ncol
 filter_tm <- user_args$filter_tm
 tm_table <- user_args$tm_table
 salmon_dir <- user_args$salmon_dir
-salmon_suffix <- ".quant.sf"
+salmon_suffix <- ".quant.genes.sf"
 group_info_file <- user_args$group_info_file
 
 library(dplyr)
@@ -136,10 +136,14 @@ for (comparison in comparisons){
   
   filtered_df_list[[comparison]]$FixedTranscript <- gsub("Ex\\.|TSS\\.|Ex\\.TSS\\.", "", filtered_df_list[[comparison]]$Reference.Transcript)
   filtered_df_list[[comparison]]$FixedTranscript <- sub("\\..*", "", filtered_df_list[[comparison]]$FixedTranscript)
+  # filtered_df_list[[comparison]] <- merge(filtered_df_list[[comparison]],
+  #                                         merged_tpm[,c("FixedTranscript",TPM_mean_groupA, TPM_mean_groupB,TPM_std_groupA,TPM_std_groupB)],
+  #                                         by.x='FixedTranscript', by.y='FixedTranscript',
+  #                                         all.x = T)
   filtered_df_list[[comparison]] <- merge(filtered_df_list[[comparison]],
-                                          merged_tpm[,c("FixedTranscript",TPM_mean_groupA, TPM_mean_groupB,TPM_std_groupA,TPM_std_groupB)],
-                                          by.x='FixedTranscript', by.y='FixedTranscript')
-
+                                          merged_tpm[,c("Name",TPM_mean_groupA, TPM_mean_groupB,TPM_std_groupA,TPM_std_groupB)],
+                                          by.x='Gene.Symbol', by.y='Name',
+                                          all.x = T)
   # write filtered results to csv file
   filtered_results_file <- file.path(output_dir, paste0("SplicingEventsFiltered-",comparison,"-PSI",delta_PSI,"_Pvalue", p_value,"_FDR", fdr,".csv"))
   write.csv(filtered_df_list[[comparison]], file=filtered_results_file, row.names = F) # write filtered results file
