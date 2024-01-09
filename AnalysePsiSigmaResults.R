@@ -21,9 +21,9 @@ stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir))
 print(user_args)
 
 # # DEBUG Arguments
-# PSI_Sigma_dir <- "/private10/Projects/Efi/ArielBashari/PSI-Sigma_gencodeGTF/"
-# output_dir <- "/private10/Projects/Efi/ArielBashari/PSI-Sigma_gencodeGTF/Results_withTPM/"
-# output_dir_name <- "Output_noFilter"
+# PSI_Sigma_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/All/NoTreatments/"
+# output_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/All/NoTreatments/TM_Results/"
+# output_dir_name <- NULL
 # output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
 # delta_PSI = 20
 # p_value = 0.05
@@ -31,11 +31,11 @@ print(user_args)
 # ncol_plot <- 3
 # novelSS = F
 # gene_prefix = "MSTRG"
-# filter_tm <- F
+# filter_tm <- T
 # tm_table <- "/private10/Projects/Efi/General/transmembrane_Nov23.csv"
-# salmon_dir <- "/private10/Projects/Efi/ArielBashari/Salmon_1.4.0_gencode_v28/ResultFiles/"
+# salmon_dir <- "/private10/Projects/Efi/AML/Salmon_gencode_v28/"
 # salmon_suffix = ".quant.genes.sf"
-# group_info_file <- "/private10/Projects/Efi/ArielBashari/Salmon_1.4.0_removeAdapts/GroupInfo.txt"
+# group_info_file <- "/private10/Projects/Efi/AML/Salmon_gencode_v28/NoTreatments-Info.txt"
 
 
 # Arguments assignment
@@ -122,8 +122,13 @@ for (file in salmon_files){
 }
 for (group in groups){
   samples <- subset(group_info, Group==group)$Sample
-  merged_tpm[[paste0("TPM_mean_",group)]] <- rowMeans(merged_tpm[,samples])
-  merged_tpm[[paste0("TPM_std_",group)]] <- apply(merged_tpm[,samples], 1, sd)
+  if (length(samples) == 1) { # handle case of 1 sample in a group
+    merged_tpm[[paste0("TPM_mean_",group)]] <- merged_tpm[,samples]
+    merged_tpm[[paste0("TPM_std_",group)]] <- 0
+  } else {
+    merged_tpm[[paste0("TPM_mean_",group)]] <- rowMeans(merged_tpm[,samples])
+    merged_tpm[[paste0("TPM_std_",group)]] <- apply(merged_tpm[,samples], 1, sd)
+  }
 }
 merged_tpm$FixedTranscript <- sub("\\..*", "", merged_tpm$Name)
 target_exons_list <- list() # for Vann diagram
@@ -173,33 +178,47 @@ volcano_plot
 ggsave(filename="VolcanoPlots.png", plot = volcano_plot, path=output_dir, width = 10, height = 6, dpi = 300)
 
 # create bar plots of the significant splicing events
-merged_results_filtered$Comparison <- factor(merged_results_filtered$Comparison, levels = comparisons) # reorder the comparisons lables
-filtered_splicing_event_barplot <- ggplot(merged_results_filtered, aes(y=Comparison, fill=Event.Type))+
-  geom_bar(position = "stack")+
-  geom_text(stat = "count", aes(label = after_stat(count)), position=position_stack(0.5)) +
-  #theme_minimal()+
-  labs(title = "PSI-Sigma results: Differential Splicing Events",
-       subtitle = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value), y = "Count")
-filtered_splicing_event_barplot
-ggsave(filename="SignificantSplicingEvents.png", plot = filtered_splicing_event_barplot, path=output_dir, width = 10, height = 6, dpi = 300)
-
-# create Vann diagram of splicing events interesections
-num_groups <- length(target_exons_list)
-circle_colors <- rainbow(num_groups) # Generate colors dynamically based on the number of groups
-palette <- brewer.pal(num_groups, "Dark2")
-plot_path = file.path(output_dir, "VennDiagram.png")
-venn.diagram(target_exons_list, category.names = comparisons, 
-             filename=plot_path,
-             disable.logging=T,
-             force.unique = T,
-             height=2000, width=3000, resolution=250,
-             col = palette,
-             fill = c(alpha(palette, 0.3)),
-             main = "Division of significant splicing events among different comparisons",
-             main.cex=1.6,#,
-             sub = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value)
-)
-
+if (length(filtered_df_list) == 1 ){
+  ordered_event_types <- names(sort(table(merged_results_filtered$Event.Type), decreasing = TRUE))
+  merged_results_filtered$Event.Type <- factor(merged_results_filtered$Event.Type, levels = ordered_event_types)
+  filtered_splicing_event_barplot <- ggplot(merged_results_filtered, aes(x=Event.Type,fill=Event.Type))+
+    geom_bar(position = "stack")+
+    geom_text(stat = "count", aes(label = after_stat(count)), position=position_stack(0.5)) +
+    #theme_minimal()+
+    labs(title = "PSI-Sigma results: Differential Splicing Events",
+         subtitle = "|ΔPSI| > 20%, P-value & FDR < 0.05", y = "Count")
+  filtered_splicing_event_barplot
+  ggsave(filename="SignificantSplicingEvents.png", plot = filtered_splicing_event_barplot, path=output_dir, width = 10, height = 6, dpi = 300)
+  
+} else {
+  merged_results_filtered$Comparison <- factor(merged_results_filtered$Comparison, levels = comparisons) # reorder the comparisons lables
+  filtered_splicing_event_barplot <- ggplot(merged_results_filtered, aes(y=Comparison, fill=Event.Type))+
+    geom_bar(position = "stack")+
+    geom_text(stat = "count", aes(label = after_stat(count)), position=position_stack(0.5)) +
+    #theme_minimal()+
+    labs(title = "PSI-Sigma results: Differential Splicing Events",
+         subtitle = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value), y = "Count")
+  filtered_splicing_event_barplot
+  ggsave(filename="SignificantSplicingEvents.png", plot = filtered_splicing_event_barplot, path=output_dir, width = 10, height = 6, dpi = 300)
+}
+if (length(filtered_df_list) >= 2 ){
+  # create Vann diagram of splicing events interesections
+  num_groups <- length(target_exons_list)
+  circle_colors <- rainbow(num_groups) # Generate colors dynamically based on the number of groups
+  palette <- brewer.pal(num_groups, "Dark2")
+  plot_path = file.path(output_dir, "VennDiagram.png")
+  venn.diagram(target_exons_list, category.names = comparisons, 
+               filename=plot_path,
+               disable.logging=T,
+               force.unique = T,
+               height=2000, width=3000, resolution=250,
+               col = palette,
+               fill = c(alpha(palette, 0.3)),
+               main = "Division of significant splicing events among different comparisons",
+               main.cex=1.6,#,
+               sub = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value)
+  )
+}
 # creat BED file of Intron Retention events
 # groupA_ri_exons <- merged_results_filtered[(merged_results_filtered$Event.Type=='IR' | merged_results_filtered$Event.Type=='IR (overlapping region)') & merged_results_filtered$ΔPSI.... > 0, "Target.Exon"]
 # BED_ri_exons <- strsplit(groupA_ri_exons, "[:-]")
