@@ -55,7 +55,7 @@ def run_DeepTMHMM(deeptmhmm, aa_path, tmhmm_dir, type,spliced=False):
     cmd = '--fasta '+aa_path
     print("Sending command to deeptmhmm.")
     # run DeepTMHMM
-    deeptmhmm_job = deeptmhmm.cli(args=cmd, machine='local',result_prefix='my_help_testr' )
+    deeptmhmm_job = deeptmhmm.cli(args=cmd, machine='local',result_prefix=result_prefix )
     print(f"Saving results in {result_dir_path}")
     deeptmhmm_job.save_files(result_dir_path)
     return result_dir_path
@@ -122,7 +122,7 @@ def runAnalyze(event_dir):
         inclusionSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'Inclusion' in file), None)
     else:
         inclusionSeq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and 'inclusionAA' in file), None)
-    type=getType(inclusionSeq_file)
+    type=getType(os.path.basename(inclusionSeq_file))
     if type is None:
         print(f"Error in define types of {event_dir}. Skipping.")
         return
