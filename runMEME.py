@@ -7,11 +7,11 @@ import pandas as pd
 import requests, sys, os, subprocess, multiprocessing, time
 
 server="https://rest.ensembl.org"
-results_file = "/private10/Projects/Efi/ArielBashari/PSI-Sigma_gencodeGTF/Results/Scrambled_vs_4repeats_analyzed.csv"
-output_dir = "/private10/Projects/Efi/ArielBashari/Motifs/Scrambled_vs_decoy4/XSTREME/"
+results_file = "/private10/Projects/Efi/ArielBashari/Motifs/GAPmerControl_vs_DKD/SplicingResultsWithStrand.csv"
+output_dir = "/private10/Projects/Efi/ArielBashari/Motifs/GAPmerControl_vs_DKD/"
 bases_to_add = 250
-onlySES=True
-splitIncExc=True
+onlySES=False
+splitIncExc=False
 
 def getSequence(row, bases_to_add):
   # define strand as 1/-1
@@ -113,7 +113,7 @@ def run_event(index, row):
 start_time = time.time()
 target_exons_list = []
 results = pd.read_csv(results_file, index_col=False) # read PSI-Sigma results file
-pool = multiprocessing.Pool(processes=5)
+pool = multiprocessing.Pool(processes=3)
 pool.starmap(run_event,results.iterrows())
 pool.close()
 pool.join()
