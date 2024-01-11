@@ -281,6 +281,8 @@ merged_results['Exon devide by 3?'] = 'NA'
 merged_results['InclusionAAseq'] = 'NA'
 merged_results['ExclusionAAseq'] = 'NA'
 
+if not os.path.isdir(output_dir):
+  os.mkdir(output_dir)
 # global dictionaries
 transcripts_dict = {}
 cds_dict = {}
