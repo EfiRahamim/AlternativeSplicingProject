@@ -21,13 +21,13 @@ stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir))
 print(user_args)
 
 # # DEBUG Arguments
-# PSI_Sigma_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/All/NoTreatments/"
-# output_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/All/NoTreatments/TM_Results/"
+# PSI_Sigma_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/Mock6_vs_Indisulam/"
+# output_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/TEST/"
 # output_dir_name <- NULL
 # output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
 # delta_PSI = 20
-# p_value = 0.05
-# fdr = 0.05
+# p_value = 1.1
+# fdr = 1.1
 # ncol_plot <- 3
 # novelSS = F
 # gene_prefix = "MSTRG"
@@ -35,7 +35,7 @@ print(user_args)
 # tm_table <- "/private10/Projects/Efi/General/transmembrane_Nov23.csv"
 # salmon_dir <- "/private10/Projects/Efi/AML/Salmon_gencode_v28/"
 # salmon_suffix = ".quant.genes.sf"
-# group_info_file <- "/private10/Projects/Efi/AML/Salmon_gencode_v28/NoTreatments-Info.txt"
+# group_info_file <- "/private10/Projects/Efi/AML/Salmon_1.4.0/U2AF1-6H-Info.txt"
 
 
 # Arguments assignment
@@ -91,7 +91,7 @@ for (dir in output_dirs){
     print(paste0("Merging with TM table: ", nrow(df), " results."))
   }
   full_df_list[[comparison]] <- df
-  filtered_df_list[[comparison]] <- subset(df,abs(ΔPSI....)>= delta_PSI & T.test.p.value < p_value & FDR..BH. < fdr )
+  filtered_df_list[[comparison]] <- subset(df,abs(ΔPSI....)>= delta_PSI & T.test.p.value < p_value & FDR..BH. < fdr & T > 0 & N > 0 )
 }
 
 merged_results <- data.frame(matrix(nrow = 0, ncol = 15))
