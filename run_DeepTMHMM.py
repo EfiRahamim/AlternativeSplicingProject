@@ -1,5 +1,6 @@
 import os,sys, glob, shutil, multiprocessing, subprocess, argparse, biolib
 biolib.utils.STREAM_STDOUT = False
+import pandas as pd
 
 
 # CLI arguments
@@ -19,6 +20,7 @@ user_args = parser.parse_args()
 # global variables
 #input_dir = "/private5/Projects/Efi/AS/pipeline_tests/tmp_results/"
 true_TM_events = [] # list of true TM splicing events ID
+candidate_TM_events = [] # list of possible candidates (true TM event & outside domains are different) 
 # get list of absolut pathes of transcripts directories
 def getPaths(input_dir):
     #directories_pattern = input_dir+"*/*/*"
@@ -94,9 +96,46 @@ def check_TM(result_dir_path):
         else:
             return True
 
+# get list of outside domains dequences
+def get_outside_domains(gff_file, topologis_file):
+    gff_df = pd.read_csv(gff_file, sep='\t', comment='#', header=None)
+    gff_df = gff_df.iloc[:, :-4]  # Remove 4 last columns (empty)
+    gff_df.columns = ['Description', 'Domain', 'Start', 'End'] # Rename the columns
+    outside_gff_df = gff_df[gff_df['Domain'] == 'outside'] # subset by to keep only 'outside' domains
+
+    # Read the file and get the second line
+    with open(topologis_file, 'r') as file:
+    # Read the file and split its contents by newline
+        content = file.read().split('\n')
+    aa_seq = content[1] # amino acid sequence
+    
+    outside_seqs = []
+    for index,row in outside_gff_df.iterrows(): # make list of outside domains sequences
+        start = int(row['Start'] - 1)
+        end = int(row['End'])
+        outside_seq = aa_seq[start:end]
+        outside_seqs.append(outside_seq)
+    return outside_seqs # return list of outside domains sequences
+
+# check if two TM transcripts are identicle in their outside domains
+def check_identicle_TM(tmhmm_dir_1, tmhmm_dir_2):
+    gff_file_1 = [os.path.join(tmhmm_dir_1,file) for file in os.listdir(tmhmm_dir_1) if file == 'TMRs.gff3'][0] # get TMRs.gff3 file of first group
+    topologis_file_1 = [os.path.join(tmhmm_dir_1,file) for file in os.listdir(tmhmm_dir_1) if file == 'predicted_topologies.3line'][0] # get predicted_topologies.3line file of first group
+    outside_sequences_1 = get_outside_domains(gff_file_1, topologis_file_1) # get sequences of outside domains
+
+    gff_file_2 = [os.path.join(tmhmm_dir_2,file) for file in os.listdir(tmhmm_dir_2) if file == 'TMRs.gff3'][0] # get TMRs.gff3 file of second group
+    topologis_file_2 = [os.path.join(tmhmm_dir_2,file) for file in os.listdir(tmhmm_dir_2) if file == 'predicted_topologies.3line'][0] # get predicted_topologies.3line file of second group
+    outside_sequences_2 = get_outside_domains(gff_file_2, topologis_file_2) # get sequences of outside domains
+
+    # check if outside domains are identicle or not
+    if outside_sequences_1 == outside_sequences_2:
+        return True
+    else:
+        return False
+
 # run the analyze steps on the current transcript directory
 def runAnalyze(event_dir):
-    global true_TM_events
+    global true_TM_events, candidate_TM_events
     print(f"Analyzing event: {event_dir}")
     type=[]
     # create 'deepTMHMM' results directory
@@ -107,6 +146,9 @@ def runAnalyze(event_dir):
             true_TM_events.append(os.path.basename(event_dir))
             with open ('True_TM_events.txt', 'a') as f:
                 f.write(os.path.basename(event_dir)+'\n')
+            if not check_identicle_TM(os.path.join(tmhmm_dir,os.listdir(tmhmm_dir)[0]),os.path.join(tmhmm_dir,os.listdir(tmhmm_dir)[1])):
+                with open ('Candidate_TM_events.txt', 'a') as f:
+                    f.write(os.path.basename(event_dir)+'\n')
         elif len(os.listdir(tmhmm_dir)) == 1:
             with open('noTMdomain.txt', 'a') as f:
                 f.write(event_dir + '\n')
@@ -149,6 +191,9 @@ def runAnalyze(event_dir):
     true_TM_events.append(os.path.basename(event_dir))
     with open ('True_TM_events.txt', 'a') as f:
         f.write(os.path.basename(event_dir)+'\n')
+    if not check_identicle_TM(tmhmm_inclusionSeq_path,tmhmm_splicedSeq_path):
+        with open ('Candidate_TM_events.txt', 'a') as f:
+            f.write(os.path.basename(event_dir)+'\n')
 
 
 
