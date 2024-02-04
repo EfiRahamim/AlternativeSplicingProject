@@ -272,7 +272,7 @@ gene_map.columns = ['Transcript', 'Gene.Symbol', 'Strand']
 gene_map.drop('Transcript', axis=1, inplace=True)
 gene_map.drop_duplicates(inplace=True)
 merged_results = pd.merge(results, gene_map, on='Gene.Symbol', how='inner') # add strand to results
-merged_results = merged_results.rename(columns={merged_results.columns[9]: 'dPSI'}) # rename 'delta PSI' column 
+merged_results = merged_results.rename(columns={merged_results.columns[8]: 'dPSI'}) # rename 'delta PSI' column 
 # add columns of exon location
 merged_results['Transcript found?'] = 'NA'
 merged_results['Exon in transcript?'] = 'NA'
@@ -288,7 +288,7 @@ transcripts_dict = {}
 cds_dict = {}
 gtf_df = parse_gtf(gtf_file) # parse the GTF file into shared data frame
 # run analyze in parallel
-pool = multiprocessing.Pool(processes=5) 
+pool = multiprocessing.Pool(processes=3) 
 updated_rows = pool.starmap(run_with_GTF,merged_results.iterrows())
 pool.close()
 pool.join()
