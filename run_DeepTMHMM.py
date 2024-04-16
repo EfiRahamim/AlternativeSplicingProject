@@ -96,7 +96,7 @@ def check_TM(result_dir_path):
         else:
             return True
 
-# get list of outside domains dequences
+# get list of outside domains sequences
 def get_outside_domains(gff_file, topologis_file):
     gff_df = pd.read_csv(gff_file, sep='\t', comment='#', header=None)
     gff_df = gff_df.iloc[:, :-4]  # Remove 4 last columns (empty)

@@ -242,6 +242,9 @@ def run_with_GTF(index,row):
     return row
   if exon_seq in cds_seq:
     row['Exon in CDS?'] = 'yes'
+    if cds_seq.count(exon_seq) > 1:
+      row['Exon appear more than once in CDS?'] = 'yes'
+      return row
     if (len(exon_seq) % 3 == 0): # check if exon is devided by 3
       row['Exon devide by 3?'] = 'yes'
     else:

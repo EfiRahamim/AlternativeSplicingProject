@@ -15,27 +15,29 @@ parser$add_argument("--filter_by_TM", action="store_true", dest="filter_tm", hel
 parser$add_argument("-tm", action="store", dest="tm_table", help="Path of TransMembrane Domains table (UniProt). Defualt: /private10/Projects/Efi/General/transmembrane_Nov23.csv", default="/private10/Projects/Efi/General/transmembrane_Nov23.csv")
 parser$add_argument("-salmon", action="store", dest="salmon_dir", help="Directory of salmon results.")
 parser$add_argument("-group_info", action="store", dest="group_info_file", help="Tab-delimetered file of 'Sample' and 'Group'. Header required.")
+parser$add_argument("-TPM", action="store", dest="tpm", help="Filter results by TPM value of both groups. deafult: 0", type="double", default=0)
 
 user_args <- parser$parse_args()
 stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir))
 print(user_args)
 
 # # DEBUG Arguments
-# PSI_Sigma_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/Mock6_vs_Indisulam/"
-# output_dir <- "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/TEST/"
+# PSI_Sigma_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/PSI-Sigma/All/NoTreatments_vs_Mock_matched/"
+# output_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/NoTreatments_vs_Mock_matched/"
 # output_dir_name <- NULL
 # output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
 # delta_PSI = 20
-# p_value = 1.1
-# fdr = 1.1
+# p_value = 0.05
+# fdr = 0.05
 # ncol_plot <- 3
 # novelSS = F
 # gene_prefix = "MSTRG"
-# filter_tm <- T
+# filter_tm <- F
 # tm_table <- "/private10/Projects/Efi/General/transmembrane_Nov23.csv"
 # salmon_dir <- "/private10/Projects/Efi/AML/Salmon_gencode_v28/"
 # salmon_suffix = ".quant.genes.sf"
-# group_info_file <- "/private10/Projects/Efi/AML/Salmon_1.4.0/U2AF1-6H-Info.txt"
+# group_info_file <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/PSI-Sigma/All/NoTreatments_vs_Mock_matched/Input/GroupInfo.txt"
+# tpm <- 0
 
 
 # Arguments assignment
@@ -54,6 +56,7 @@ tm_table <- user_args$tm_table
 salmon_dir <- user_args$salmon_dir
 salmon_suffix <- ".quant.genes.sf"
 group_info_file <- user_args$group_info_file
+tpm <- user_args$tpm
 
 library(dplyr)
 library(ggplot2)
@@ -132,12 +135,20 @@ for (group in groups){
 }
 merged_tpm$FixedTranscript <- sub("\\..*", "", merged_tpm$Name)
 target_exons_list <- list() # for Vann diagram
+# func for calc Avg PSI 
+calculate_average_psi <- function(input_string) {
+  elements <- unlist(strsplit(input_string, split = "\\|"))
+  numeric_elements <- as.numeric(elements[elements != 'na'])
+  mean(numeric_elements, na.rm = TRUE)
+}
 for (comparison in comparisons){
   #add TPM value for each transcript in each group
-  TPM_mean_groupA <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][1])
-  TPM_mean_groupB <- paste0("TPM_mean_", strsplit(comparison, "_vs_")[[1]][2])
-  TPM_std_groupA <- paste0("TPM_std_", strsplit(comparison, "_vs_")[[1]][1])
-  TPM_std_groupB <- paste0("TPM_std_", strsplit(comparison, "_vs_")[[1]][2])
+  groupA <- strsplit(comparison, "_vs_")[[1]][1]
+  groupB <- strsplit(comparison, "_vs_")[[1]][2]
+  TPM_mean_groupA <- paste0("TPM_mean_", groupA)
+  TPM_mean_groupB <- paste0("TPM_mean_", groupB)
+  TPM_std_groupA <- paste0("TPM_std_", groupA)
+  TPM_std_groupB <- paste0("TPM_std_", groupB)
   
   filtered_df_list[[comparison]]$FixedTranscript <- gsub("Ex\\.|TSS\\.|Ex\\.TSS\\.", "", filtered_df_list[[comparison]]$Reference.Transcript)
   filtered_df_list[[comparison]]$FixedTranscript <- sub("\\..*", "", filtered_df_list[[comparison]]$FixedTranscript)
@@ -149,13 +160,22 @@ for (comparison in comparisons){
                                           merged_tpm[,c("Name",TPM_mean_groupA, TPM_mean_groupB,TPM_std_groupA,TPM_std_groupB)],
                                           by.x='Gene.Symbol', by.y='Name',
                                           all.x = T)
+  # filter results by TPM 
+  filtered_df_list[[comparison]] <- filter(filtered_df_list[[comparison]], 
+                                           across(all_of(c(TPM_mean_groupA,TPM_mean_groupB)), ~. >= tpm))
+  # add Avg. PSI value for each group
+  avgPSI_groupA <- paste0('Avg.PSI_', groupA)
+  avgPSI_groupB <- paste0('Avg.PSI_', groupB)
+  filtered_df_list[[comparison]][[avgPSI_groupA]] <- sapply(filtered_df_list[[comparison]]$N.Values, calculate_average_psi)
+  filtered_df_list[[comparison]][[avgPSI_groupB]] <- sapply(filtered_df_list[[comparison]]$T.Values, calculate_average_psi)
+  
   # write filtered results to csv file
-  filtered_results_file <- file.path(output_dir, paste0("SplicingEventsFiltered-",comparison,"-PSI",delta_PSI,"_Pvalue", p_value,"_FDR", fdr,".csv"))
+  filtered_results_file <- file.path(output_dir, paste0("SplicingEventsFiltered-",comparison,"-PSI",delta_PSI,"_Pvalue", p_value,"_FDR", fdr,"_TPM",tpm, ".csv"))
   write.csv(filtered_df_list[[comparison]], file=filtered_results_file, row.names = F) # write filtered results file
   full_df_list[[comparison]]$Comparison <- comparison
   filtered_df_list[[comparison]]$Comparison <- comparison
   merged_results <- rbind(merged_results, full_df_list[[comparison]])
-  merged_results_filtered <- rbind(merged_results_filtered, filtered_df_list[[comparison]]%>%select(-TPM_mean_groupA, -TPM_mean_groupB, -TPM_std_groupA, -TPM_std_groupB))
+  merged_results_filtered <- rbind(merged_results_filtered, filtered_df_list[[comparison]]%>%select(-TPM_mean_groupA, -TPM_mean_groupB, -TPM_std_groupA, -TPM_std_groupB, -avgPSI_groupA, -avgPSI_groupB))
   target_exons_list[[comparison]] <- paste0(filtered_df_list[[comparison]]$Target.Exon,
                                             filtered_df_list[[comparison]]$FixedTranscript,
                                             filtered_df_list[[comparison]]$Event.Type)
