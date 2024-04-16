@@ -15,11 +15,11 @@ combined_dataframe = pd.concat(dataframes, ignore_index=True)
 combined_dataframe_noDups = combined_dataframe.drop_duplicates()
 
 data = combined_dataframe_noDups
-df_rank = data.melt(id_vars=['Group','Splicing Event','Peptide','ID', 'Avg.PSI_PeptideSource','Avg.PSI_OtherGroup'], 
+df_rank = data.melt(id_vars=['Group','Splicing Event','Peptide','ID','SplicingIndex', 'Avg.PSI_PeptideSource','Avg.PSI_OtherGroup','Avg.TPM_PeptideSource','Avg.TPM_OtherGroup'], 
                 value_vars= data.columns[data.columns.str.endswith('_Rank')],
                 var_name='HLA_Rank', 
                 value_name='Rank').dropna(subset=['Rank'])
-df_nM = data.melt(id_vars=['Group','Splicing Event','Peptide','ID', 'Avg.PSI_PeptideSource','Avg.PSI_OtherGroup'], 
+df_nM = data.melt(id_vars=['Group','Splicing Event','Peptide','ID','SplicingIndex', 'Avg.PSI_PeptideSource','Avg.PSI_OtherGroup','Avg.TPM_PeptideSource','Avg.TPM_OtherGroup'], 
                 value_vars= data.columns[data.columns.str.endswith('_nM')],
                 var_name='HLA_nM', 
                 value_name='nM').dropna(subset=['nM'])
@@ -31,10 +31,10 @@ df_rank.drop(columns=['HLA_Rank'], inplace=True)
 df_nM.drop(columns=['HLA_nM'], inplace=True)
 
 # Rearrange columns in each melted DataFrame
-df_rank = df_rank[['Group','Splicing Event','Peptide','ID','Avg.PSI_PeptideSource','Avg.PSI_OtherGroup', 'HLA', 'Rank']]
-df_nM = df_nM[['Group','Splicing Event','Peptide','ID','Avg.PSI_PeptideSource','Avg.PSI_OtherGroup', 'HLA', 'nM']]
+df_rank = df_rank[['Group','Splicing Event','Peptide','ID','SplicingIndex','Avg.PSI_PeptideSource','Avg.PSI_OtherGroup','Avg.TPM_PeptideSource','Avg.TPM_OtherGroup', 'HLA', 'Rank']]
+df_nM = df_nM[['Group','Splicing Event','Peptide','ID','SplicingIndex','Avg.PSI_PeptideSource','Avg.PSI_OtherGroup','Avg.TPM_PeptideSource','Avg.TPM_OtherGroup', 'HLA', 'nM']]
 
-df_merged = pd.merge(df_rank, df_nM, on=['Group','Splicing Event','Peptide','ID','Avg.PSI_PeptideSource','Avg.PSI_OtherGroup', 'HLA'], how='inner')
+df_merged = pd.merge(df_rank, df_nM, on=['Group','Splicing Event','Peptide','ID','SplicingIndex','Avg.PSI_PeptideSource','Avg.PSI_OtherGroup','Avg.TPM_PeptideSource','Avg.TPM_OtherGroup', 'HLA'], how='inner')
 
 # Identify peptides in both control and treatments
 control_peptides = set(df_merged[(df_merged['Group'] == 'Mock6') | (df_merged['Group'] == 'NoTreatmentSF')]['Peptide'])
