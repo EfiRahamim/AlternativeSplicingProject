@@ -1,6 +1,6 @@
 # filter true TM events
-dir_path <- "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/TM_Results/SplicingEventsFiles/NoTreatment_vs_PladB/"
-comparison <- "NoTreatment_vs_PladB"
+dir_path <- "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/18-Hours-Treatments/TM_Results/SplicingEventsFiles/NoTreatment_vs_FB23-2/"
+comparison <- "NoTreatment_vs_FB23-2"
 results_file <- paste0(dir_path, comparison,"_analyzed.csv")
 candidate_TM_events <- paste0(dir_path,"/SplicingEventsFiles/Candidate_TM_events.txt")
 results_df <- read.csv(results_file)
@@ -15,11 +15,11 @@ write.csv(results_filtered, row.names = F,
 # check for mutual events in 6-hours-treatments 
 
 # read files of filtered TM events
-NTNSF_NT_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/All/NoTreatments/TM_Results/NoTreatmentNoSF_vs_NoTreatmentSF/NoTreatmentNoSF_vs_NoTreatmentSF_TM_candidates.csv")
-NT_pladB_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/TM_Results/SplicingEventsFiles/NoTreatment_vs_PladB/NoTreatment_vs_PladB_TM_candidates.csv")
-NT_indisulam_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/TM_Results/SplicingEventsFiles/NoTreatment_vs_Indisulam/NoTreatment_vs_Indisulam_TM_candidates.csv")
-Mock6_pladB_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/TM_Results/SplicingEventsFiles/Mock6_vs_PladB/Mock6_vs_PladB_TM_candidates.csv")
-Mock6_indisulam_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/TM_Results/SplicingEventsFiles/Mock6_vs_Indisulam/Mock6_vs_Indisulam_TM_candidates.csv")
+#NTNSF_NT_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/All/NoTreatments/TM_Results/NoTreatmentNoSF_vs_NoTreatmentSF/NoTreatmentNoSF_vs_NoTreatmentSF_TM_candidates.csv")
+NT_pladB_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/NoTreatment_vs_PladB/NoTreatment_vs_PladB_TM_candidates.csv")
+NT_indisulam_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/NoTreatment_vs_Indisulam/NoTreatment_vs_Indisulam_TM_candidates.csv")
+Mock6_pladB_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/Mock6_vs_PladB/Mock6_vs_PladB_TM_candidates.csv")
+Mock6_indisulam_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/Mock6_vs_Indisulam/Mock6_vs_Indisulam_TM_candidates.csv")
 # mutate data frames for "Inclusion/Exclusion" column
 NTNSF_NT_df <- NTNSF_NT_df %>%
   mutate(`Inc/Exc` = ifelse(dPSI > 0, "Inclusion", "Exclusion"))
@@ -47,27 +47,27 @@ library(tidyverse)
 list_df_all <- list(NT_pladB_df, NT_indisulam_df,Mock6_pladB_df,Mock6_indisulam_df)
 merged_all <- list_df_all %>% reduce(inner_join, by=col_to_merge)
 #merged_df <- merge(pladB_df, indisulam_df, by <- col_to_merge)
-write.csv(merged_all, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/All/6-Hours-Treatments/TM_Results/MutualEventsCandidates/6HtreatmentsAll_mutualEvents.csv")
+write.csv(merged_all, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/MutualEventsCandidates/6HtreatmentsAll_mutualEvents.csv")
 
 # merge only NoTreatments
 list_df_NT <- list(NT_pladB_df, NT_indisulam_df)
 merged_NT <- list_df_NT %>% reduce(inner_join, by=col_to_merge)
-write.csv(merged_NT, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/TM_Results/SplicingEventsFiles/MutualEventsCandidates/NoTreatments_mutualEvents.csv")
+write.csv(merged_NT, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/MutualEventsCandidates/NoTreatments_mutualEvents.csv")
 
 # merge only Mock6
 list_df_mock6 <- list(Mock6_pladB_df,Mock6_indisulam_df)
 merged_mock6 <- list_df_mock6 %>% reduce(inner_join, by=col_to_merge)
-write.csv(merged_mock6, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/All/6-Hours-Treatments/TM_Results/MutualEventsCandidates/Mock6_mutualEvents.csv")
+write.csv(merged_mock6, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/MutualEventsCandidates/Mock6_mutualEvents.csv")
 
 # merge only indisulam
 list_df_indisulam <- list(NT_indisulam_df,Mock6_indisulam_df)
 merged_indisulam <- list_df_indisulam %>% reduce(inner_join, by=col_to_merge)
-write.csv(merged_indisulam, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/TM_Results/SplicingEventsFiles/MutualEventsCandidates/Indisulam_mutualEvents.csv")
+write.csv(merged_indisulam, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/MutualEventsCandidates/Indisulam_mutualEvents.csv")
 
 # merge only PladB
 list_df_pladB <- list(Mock6_pladB_df,NT_pladB_df)
 merged_pladB <- list_df_pladB %>% reduce(inner_join, by=col_to_merge)
-write.csv(merged_pladB, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/TM_Results/SplicingEventsFiles/MutualEventsCandidates/PladB_mutualEvents.csv")
+write.csv(merged_pladB, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/MutualEventsCandidates/PladB_mutualEvents.csv")
 
 # count results
 counts <- data.frame(Intersection = c('All', 
@@ -84,7 +84,7 @@ library(ggplot2)
 intersect_plot<-ggplot(counts, aes(x = Intersection, y = Mutual_Events, fill = Intersection)) +
   geom_bar(stat = "identity") +
   geom_text(aes(label = Mutual_Events), vjust = -0.5, size = 3) +
-  labs(title = "Mutual splicing events among different comparisons - only in SRSF2mut samples", y = "Mutual Events") +
+  labs(title = "Mutual splicing events among different comparisons - only in U2AF1mut samples", y = "Mutual Events") +
   theme(legend.position = "none",
         axis.text.x = element_text(size = 8),# angle = 45, hjust = 1), 
         axis.text.y = element_text(size = 10),
@@ -92,41 +92,83 @@ intersect_plot<-ggplot(counts, aes(x = Intersection, y = Mutual_Events, fill = I
         axis.title.x = element_text(size = 12),
         axis.title.y = element_text(size = 12))
 intersect_plot
-ggsave(intersect_plot, filename = "/private10/Projects/Efi/AML/PSI-Sigma/SRSF2/6-Hours-Treatments/TM_Results/TM_IntersectionEvents.png",width = 10, height = 6, dpi = 300 )
+ggsave(intersect_plot, filename = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/6-Hours-Treatments/TM_Results/TM_IntersectionEvents.png",width = 10, height = 6, dpi = 300 )
+
 
 # check for mutual events in 18-hours-treatments (only NoTreatments vs treatments)
 
-# filter true TM events
-results_file <- "/private10/Projects/Efi/AML/PSI-Sigma/All/18-Hours-Treatments/TM_Results/NoTreatmentSF_vs_5Aza/NoTreatmentSF_vs_5Aza_analyzed.csv"
-candidate_TM_events <- "/private10/Projects/Efi/AML/PSI-Sigma/All/18-Hours-Treatments/TM_Results/NoTreatmentSF_vs_5Aza/SplicingEventsFiles/Candidate_TM_events.txt"
-results_df <- read.csv(results_file)
-colnames(results_df)[10] <- 'dPSI'
-colnames(results_df)[11] <- 'T.test.p.value'
-TM_events_df <- unique(read.csv(candidate_TM_events, header = F))
-results_filtered <- merge(results_df, TM_events_df, by.x = 'X', by.y = 'V1')
-write.csv(results_filtered, row.names = F, 
-          file = "/private10/Projects/Efi/AML/PSI-Sigma/All/18-Hours-Treatments/TM_Results/NoTreatmentSF_vs_5Aza/NoTreatmentSF_vs_5Aza_TM_candidates.csv")
-
 # read files of filtered TM events
-NT_5Aza_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/All/18-Hours-Treatments/TM_Results/NoTreatmentSF_vs_5Aza/NoTreatmentSF_vs_5Aza_TM_candidates.csv")
-NT_FB23_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/All/18-Hours-Treatments/TM_Results/NoTreatmentSF_vs_FB23-2/NoTreatmentSF_vs_FB23-2_TM_candidates.csv")
+NT_5Aza_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/18-Hours-Treatments/TM_Results/NoTreatment_vs_5Aza/NoTreatment_vs_5Aza_TM_candidates.csv")
+NT_FB23_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/18-Hours-Treatments/TM_Results/NoTreatment_vs_FB23-2/NoTreatment_vs_FB23-2_TM_candidates.csv")
+Mock18_5Aza_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/18-Hours-Treatments/TM_Results/Mock18_vs_5Aza/Mock18_vs_5Aza_TM_candidates.csv")
+Mock18_FB23_df <- read.csv("/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/18-Hours-Treatments/TM_Results/Mock18_vs_FB23-2/Mock18_vs_FB23-2_TM_candidates.csv")
 # mutate data frames for "Inclusion/Exclusion" column
 NT_5Aza_df <- NT_5Aza_df %>%
   mutate(`Inc/Exc` = ifelse(dPSI > 0, "Inclusion", "Exclusion"))
 NT_FB23_df <- NT_FB23_df %>%
   mutate(`Inc/Exc` = ifelse(dPSI > 0, "Inclusion", "Exclusion"))
+Mock18_5Aza_df <- Mock18_5Aza_df %>%
+  mutate(`Inc/Exc` = ifelse(dPSI > 0, "Inclusion", "Exclusion"))
+Mock18_FB23_df <- Mock18_FB23_df %>%
+  mutate(`Inc/Exc` = ifelse(dPSI > 0, "Inclusion", "Exclusion"))
 # subset data frames
 cols_to_keep <- c("X", "Gene.Symbol", "Event.Region","Target.Exon","Event.Type","Exon.Type","FixedTranscript","dPSI","Inc/Exc","InclusionAAseq", "ExclusionAAseq")
 NT_5Aza_df <- NT_5Aza_df[,c(cols_to_keep,colnames(NT_5Aza_df)[17], colnames(NT_5Aza_df)[18] )]
 NT_FB23_df <- NT_FB23_df[,c(cols_to_keep,colnames(NT_FB23_df)[17], colnames(NT_FB23_df)[18] )]
+Mock18_5Aza_df <- Mock18_5Aza_df[,c(cols_to_keep,colnames(Mock18_5Aza_df)[17], colnames(Mock18_5Aza_df)[18] )]
+Mock18_FB23_df <- Mock18_FB23_df[,c(cols_to_keep,colnames(Mock18_FB23_df)[17], colnames(Mock18_FB23_df)[18] )]
 # define column to merge by
 col_to_merge <- c('FixedTranscript', 'Event.Region', 'Gene.Symbol', 'Target.Exon', 'Event.Type', 'Inc/Exc')
 # merge
 library(tidyverse)
 
 # merge all data frames
-list_df <- list(NT_5Aza_df, NT_FB23_df)
+list_df <- list(NT_5Aza_df, NT_FB23_df, Mock18_5Aza_df, Mock18_FB23_df)
 merged <- list_df %>% reduce(inner_join, by=col_to_merge)
 #merged_df <- merge(pladB_df, indisulam_df, by <- col_to_merge)
-write.csv(merged, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/All/18-Hours-Treatments/TM_Results/MutualEventsCandidates/NoTreatments_mutualEvents.csv")
+write.csv(merged, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/18-Hours-Treatments/TM_Results/MutualEventsCandidates/18HtreatmentsAll_mutualEvents.csv")
 
+# merge only NoTreatments
+list_df_NT <- list(NT_5Aza_df, NT_FB23_df)
+merged_NT <- list_df_NT %>% reduce(inner_join, by=col_to_merge)
+write.csv(merged_NT, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/18-Hours-Treatments/TM_Results/MutualEventsCandidates/NoTreatments_mutualEvents.csv")
+
+# merge only Mock18
+list_df_mock18 <- list(Mock18_5Aza_df,Mock18_FB23_df)
+merged_mock18 <- list_df_mock18 %>% reduce(inner_join, by=col_to_merge)
+write.csv(merged_mock18, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/18-Hours-Treatments/TM_Results/MutualEventsCandidates/Mock18_mutualEvents.csv")
+
+# merge only 5Aza
+list_df_5Aza <- list(NT_5Aza_df,Mock18_5Aza_df)
+merged_5Aza <- list_df_5Aza %>% reduce(inner_join, by=col_to_merge)
+write.csv(merged_5Aza, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/18-Hours-Treatments/TM_Results/MutualEventsCandidates/5Aza_mutualEvents.csv")
+
+# merge only FB23-2
+list_df_FB23 <- list(NT_FB23_df,Mock18_FB23_df)
+merged_FB23 <- list_df_FB23 %>% reduce(inner_join, by=col_to_merge)
+write.csv(merged_FB23, row.names = F, file = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/18-Hours-Treatments/TM_Results/MutualEventsCandidates/FB23_mutualEvents.csv")
+
+# count results
+counts <- data.frame(Intersection = c('All', 
+                                      '5Aza+FB23-2 (vs. NoTreatments)',
+                                      '5Aza+FB23-2 (vs. Mock)', 
+                                      '5Aza (vs. Mock/No Treatment)',
+                                      'FB23-2 (vs. Mock/No Treatment)'),
+                     Mutual_Events = c(length(merged$Gene.Symbol),
+                                       length(merged_NT$Gene.Symbol),
+                                       length(merged_mock18$Gene.Symbol),
+                                       length(merged_5Aza$Gene.Symbol),
+                                       length(merged_FB23$Gene.Symbol)))
+library(ggplot2)
+intersect_plot<-ggplot(counts, aes(x = Intersection, y = Mutual_Events, fill = Intersection)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = Mutual_Events), vjust = -0.5, size = 3) +
+  labs(title = "Mutual splicing events among different comparisons - only in U2AF1mut samples", y = "Mutual Events") +
+  theme(legend.position = "none",
+        axis.text.x = element_text(size = 8),# angle = 45, hjust = 1), 
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(size = 14),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12))
+intersect_plot
+ggsave(intersect_plot, filename = "/private10/Projects/Efi/AML/PSI-Sigma/U2AF1/18-Hours-Treatments/TM_Results/TM_IntersectionEvents.png",width = 10, height = 6, dpi = 300 )
