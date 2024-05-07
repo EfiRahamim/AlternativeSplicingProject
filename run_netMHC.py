@@ -118,7 +118,7 @@ def run_netmhc(fasta_file, netMHC_dir, form, group):
               "-xls", 
               "-xlsfile", output_path]
     # run the command
-    print('Net-MHC command to run:', ' '.join(map(str, [str(item) if isinstance(item, float) else item for item in command])))
+    #print('Net-MHC command to run:', ' '.join(map(str, [str(item) if isinstance(item, float) else item for item in command])))
     try:
         #print('Net-MHC ommand to run:', ' '.join(command))
         output = subprocess.check_output(command, universal_newlines=True, stderr=subprocess.STDOUT)
