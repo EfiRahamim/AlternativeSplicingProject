@@ -1,6 +1,7 @@
 library(VennDiagram)
 library(dplyr)
 data <- read.csv("/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/NovelStrongBindingEpitopes_noDups.csv")
+out_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/"
 # data_long <- data %>%
 #   #pivot_longer(cols = starts_with("HLA"), names_to = "HLA_BindingScore", values_to = "Value", values_drop_na = TRUE)
 #   pivot_longer(cols = ends_with("_Rank"), names_to = "HLA_Rank", values_to = "Rank", values_drop_na = T) %>%
@@ -152,3 +153,7 @@ candidate_peptides <- data_long %>%
             Avg.TPM_OtherGroups = mean(Avg.TPM_OtherGroup),
             SplicingIndex = paste(unique(SplicingIndex), collapse = "/"))
 
+# write candidate peptides file
+write.csv(candidate_peptides,
+          file = paste0(out_dir, "PeptidesCandidates.csv"),
+          row.names = F)
