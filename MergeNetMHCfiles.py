@@ -60,6 +60,7 @@ control_peptides = set(df_merged[df_merged['Group'].isin(group_names)]['Peptide'
 
 # Peptides in both control and treatments
 common_peptides = control_peptides.intersection(treatment_peptides)
+# Filter the data frame
 filtered_df = filtered_df[~(filtered_df['Peptide'].isin(common_peptides))]
 
 
