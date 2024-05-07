@@ -1,7 +1,7 @@
 library(VennDiagram)
 library(dplyr)
-data <- read.csv("/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/NovelStrongBindingEpitopes_noDups.csv")
-out_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/"
+data <- read.csv("/private10/Projects/Efi/CRG/GBM/SplicingAnalysis/SplicingEvents/_forNEanalysis/DMSO_vs_H3B8800/NovelStrongBindingEpitopes_noDups.csv")
+out_dir <- "/private10/Projects/Efi/CRG/GBM/SplicingAnalysis/SplicingEvents/_forNEanalysis/DMSO_vs_H3B8800/"
 # data_long <- data %>%
 #   #pivot_longer(cols = starts_with("HLA"), names_to = "HLA_BindingScore", values_to = "Value", values_drop_na = TRUE)
 #   pivot_longer(cols = ends_with("_Rank"), names_to = "HLA_Rank", values_to = "Rank", values_drop_na = T) %>%
@@ -11,7 +11,8 @@ out_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvent
 #   relocate(HLA, .after = 4)
 data_long <- data
 #treatments_desired_order <- c("No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2")
-treatments_desired_order <- c("NoTreatmentNoSF","NoTreatmentSF","Mock6","Indisulam","PladB","Mock18","5Aza","FB23-2")
+#treatments_desired_order <- c("NoTreatmentNoSF","NoTreatmentSF","Mock6","Indisulam","PladB","Mock18","5Aza","FB23-2")
+treatments_desired_order <- c("DMSO", "H3B8800")
 data_long$Group <- factor(data_long$Group, levels = treatments_desired_order)
 
 # Temporary: filter out A3SS|A5SS events since sequences may not be corrected
@@ -31,14 +32,11 @@ HLA_treatment_AStype <- data_long %>%
   #theme_minimal()
 print(HLA_treatment_AStype)
 ggsave(HLA_treatment_AStype, 
-       path = "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/", 
+       path = out_dir, 
        filename = "NovelNEinTreatments.png",
        bg=NULL, width = 10, height = 6, dpi = 300)
 
 # 2. Plot count of each HLA type in each group
-#treatments_desired_order <- c("Mock (6h)", "Mock (18h)", "Indisulam", "5-Azacytidine", "Pladienolide-B","FB23-2", "SF Mutations")
-treatments_desired_order <- c("NoTreatmentNoSF","NoTreatmentSF","Mock6","Mock18","Indisulam","5Aza","PladB","FB23-2")
-data_long$Group <- factor(data_long$Group, levels = treatments_desired_order)
 group_colors <- c("gold", "firebrick","dodgerblue", "deeppink" , "darkviolet","darksalmon","darkorange", "darkgreen", "darkblue", "cyan", "coral", "cadetblue", "red")
 Treatment_HLA <- data_long %>%
   group_by(HLA, Group) %>%
@@ -55,7 +53,7 @@ Treatment_HLA <- data_long %>%
   scale_fill_manual(values = group_colors)
 print(Treatment_HLA)
 ggsave(Treatment_HLA, 
-       path = "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/", 
+       path = out_dir, 
        filename = "Treatment_grid_descending.png",
        bg=NULL, width = 10, height = 6, dpi = 300)
 
@@ -81,7 +79,7 @@ rank_plot <- data_long %>%
   scale_fill_manual(values = c("dodgerblue4", "dodgerblue"))
 print(rank_plot)
 ggsave(rank_plot, 
-       path = "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/", 
+       path = out_dir, 
        filename = "Rank_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
 
 # plot nM distribution
@@ -106,7 +104,7 @@ nM_plot <- data_long %>%
   scale_fill_manual(values = c("brown4", "chocolate","burlywood"))
 print(nM_plot)
 ggsave(nM_plot, 
-       path = "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/", 
+       path = out_dir, 
        filename = "Affinity_nM_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
 
 # plot UpSet plot
@@ -137,7 +135,7 @@ dev.off()
 # check for peptides that appear in many groups and many HLA allels
 # Count the number of unique groups and HLA's for each peptide 
 candidate_peptides <- data_long %>%
-  filter(!grepl('A5SS|A3SS', Splicing.Event)) %>%
+  #filter(!grepl('A5SS|A3SS', Splicing.Event)) %>%
   rowwise()%>%
   mutate(Gene=strsplit(ID,"_")[[1]][1])%>%
   group_by(Peptide, Gene, Splicing.Event) %>%
@@ -157,3 +155,43 @@ candidate_peptides <- data_long %>%
 write.csv(candidate_peptides,
           file = paste0(out_dir, "PeptidesCandidates.csv"),
           row.names = F)
+
+
+counts_plot <- ggplot(data_long, aes(x=Group, fill=Group))+
+         geom_bar()+
+  labs(title='Novel Neo-Epitopes Counts',
+       subtitle = 'Thresholds: %Rank < 0.5, Affinity (nM) < 50')
+ggsave(counts_plot, 
+       path = out_dir, 
+       filename = "NovelNeoEpitopesCounts_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
+
+rank_plot <- data_long %>%
+  group_by(Group) %>%
+  summarize(Rank_mean=mean(Rank),
+            Rank_std = sd(Rank),
+            Rank_se=sd(Rank) / sqrt(length(Rank)),
+            nM_mean=mean(nM),
+            nM_std = sd(nM),
+            nM_se=sd(nM) / sqrt(length(nM))) %>%
+  ggplot() +
+  geom_bar( aes(x=Group, y=Rank_mean), stat="identity", fill="skyblue", alpha=0.7) +
+  geom_errorbar( aes(x=Group, ymin=Rank_mean-Rank_se, ymax=Rank_mean+Rank_se), width=0.4, colour="orange", alpha=0.9, size=1.3) +
+  labs(title = 'Error Bars of Rank')
+
+nM_plot <- data_long %>%
+  group_by(Group) %>%
+  summarize(Rank_mean=mean(Rank),
+            Rank_std = sd(Rank),
+            Rank_se=sd(Rank) / sqrt(length(Rank)),
+            nM_mean=mean(nM),
+            nM_std = sd(nM),
+            nM_se=sd(nM) / sqrt(length(nM))) %>%
+  ggplot() +
+  geom_bar( aes(x=Group, y=nM_mean), stat="identity", fill="skyblue", alpha=0.7) +
+  geom_errorbar( aes(x=Group, ymin=nM_mean-nM_se, ymax=nM_mean+nM_se), width=0.4, colour="orange", alpha=0.9, size=1.3) +
+  labs(title = 'Error Bars of Affinity (nM)')
+g <- grid.arrange(rank_plot, nM_plot, ncol=2)
+ggsave(g, 
+       path = out_dir, 
+       filename = "RankAffinityMeansCompare_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
+
