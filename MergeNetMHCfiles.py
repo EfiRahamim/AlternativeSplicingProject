@@ -37,9 +37,12 @@ df_nM = df_nM[['Group','Splicing Event','Peptide','ID','SplicingIndex','Avg.PSI_
 df_merged = pd.merge(df_rank, df_nM, on=['Group','Splicing Event','Peptide','ID','SplicingIndex','Avg.PSI_PeptideSource','Avg.PSI_OtherGroup','Avg.TPM_PeptideSource','Avg.TPM_OtherGroup', 'HLA'], how='inner')
 
 # Identify peptides in both control and treatments
-control_peptides = set(df_merged[(df_merged['Group'] == 'Mock6') | (df_merged['Group'] == 'NoTreatmentSF')]['Peptide'])
-treatment_peptides = set(df_merged[(df_merged['Group'] == 'Indisulam') | (df_merged['Group'] == 'PladB')]['Peptide'])
-
+#control_peptides = set(df_merged[(df_merged['Group'] == 'Mock6') | (df_merged['Group'] == 'NoTreatmentSF')]['Peptide'])
+#treatment_peptides = set(df_merged[(df_merged['Group'] == 'Indisulam') | (df_merged['Group'] == 'PladB')]['Peptide'])
+control_group_names = ['Mock6', 'NoTreatmentSF']
+control_peptides = set(df_merged[df_merged['Group'].isin(group_names)]['Peptide'])
+treatment_group_names = ['Indisulam', 'PladB']
+control_peptides = set(df_merged[df_merged['Group'].isin(group_names)]['Peptide'])
 # Peptides in both control and treatments
 common_peptides = control_peptides.intersection(treatment_peptides)
 
@@ -48,8 +51,12 @@ common_peptides = control_peptides.intersection(treatment_peptides)
 filtered_df = df_merged[~(df_merged['Peptide'].isin(common_peptides))]
 
 # Identify peptides in both control and treatments
-control_peptides = set(df_merged[(df_merged['Group'] == 'Mock18') | (df_merged['Group'] == 'NoTreatmentSF')]['Peptide'])
-treatment_peptides = set(df_merged[(df_merged['Group'] == '5Aza') | (df_merged['Group'] == 'FB23-2')]['Peptide'])
+#control_peptides = set(df_merged[(df_merged['Group'] == 'Mock18') | (df_merged['Group'] == 'NoTreatmentSF')]['Peptide'])
+#treatment_peptides = set(df_merged[(df_merged['Group'] == '5Aza') | (df_merged['Group'] == 'FB23-2')]['Peptide'])
+control_group_names = ['Mock18', 'NoTreatmentSF']
+control_peptides = set(df_merged[df_merged['Group'].isin(group_names)]['Peptide'])
+treatment_group_names = ['5Aza', 'FB23-2']
+control_peptides = set(df_merged[df_merged['Group'].isin(group_names)]['Peptide'])
 
 # Peptides in both control and treatments
 common_peptides = control_peptides.intersection(treatment_peptides)
