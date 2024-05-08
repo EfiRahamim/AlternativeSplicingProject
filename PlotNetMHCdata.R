@@ -1,5 +1,9 @@
 library(VennDiagram)
 library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(gridExtra)
+
 data <- read.csv("/private10/Projects/Efi/CRG/GBM/SplicingAnalysis/SplicingEvents/_forNEanalysis/DMSO_vs_H3B8800/NovelStrongBindingEpitopes_noDups.csv")
 out_dir <- "/private10/Projects/Efi/CRG/GBM/SplicingAnalysis/SplicingEvents/_forNEanalysis/DMSO_vs_H3B8800/"
 # data_long <- data %>%
@@ -156,7 +160,7 @@ write.csv(candidate_peptides,
           file = paste0(out_dir, "PeptidesCandidates.csv"),
           row.names = F)
 
-
+# count novel NE in each group
 counts_plot <- ggplot(data_long, aes(x=Group, fill=Group))+
          geom_bar()+
   labs(title='Novel Neo-Epitopes Counts',
@@ -165,33 +169,38 @@ ggsave(counts_plot,
        path = out_dir, 
        filename = "NovelNeoEpitopesCounts_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
 
-rank_plot <- data_long %>%
+### create plots of Rank and nM comparisons
+summary_data <- data_long %>%
   group_by(Group) %>%
   summarize(Rank_mean=mean(Rank),
             Rank_std = sd(Rank),
             Rank_se=sd(Rank) / sqrt(length(Rank)),
             nM_mean=mean(nM),
             nM_std = sd(nM),
-            nM_se=sd(nM) / sqrt(length(nM))) %>%
-  ggplot() +
+            nM_se=sd(nM) / sqrt(length(nM)))
+# calc p-values for Rank
+Rank_p_test <- data_long %>% 
+  compare_means(Rank~Group, data=.)
+# compare Rank between groups
+rank_plot <- ggplot(summary_data) +
   geom_bar( aes(x=Group, y=Rank_mean), stat="identity", fill="skyblue", alpha=0.7) +
-  geom_errorbar( aes(x=Group, ymin=Rank_mean-Rank_se, ymax=Rank_mean+Rank_se), width=0.4, colour="orange", alpha=0.9, size=1.3) +
+  geom_errorbar( aes(x=Group, ymin=Rank_mean-Rank_std, ymax=Rank_mean+Rank_std), width=0.4, colour="orange", alpha=0.9, size=1.3) +
+  geom_text(aes(x = max(as.numeric(Group)), y = max(Rank_mean+Rank_std)), label = paste(Rank_p_test$p.signif, Rank_p_test$method), hjust = 1, vjust = 1) +
   labs(title = 'Error Bars of Rank')
+  
+# calc p-values for nM
+nM_p_test <- data_long %>% 
+  compare_means(nM~Group, data=.)
 
-nM_plot <- data_long %>%
-  group_by(Group) %>%
-  summarize(Rank_mean=mean(Rank),
-            Rank_std = sd(Rank),
-            Rank_se=sd(Rank) / sqrt(length(Rank)),
-            nM_mean=mean(nM),
-            nM_std = sd(nM),
-            nM_se=sd(nM) / sqrt(length(nM))) %>%
-  ggplot() +
+nM_plot <- ggplot(summary_data) +
   geom_bar( aes(x=Group, y=nM_mean), stat="identity", fill="skyblue", alpha=0.7) +
-  geom_errorbar( aes(x=Group, ymin=nM_mean-nM_se, ymax=nM_mean+nM_se), width=0.4, colour="orange", alpha=0.9, size=1.3) +
+  geom_errorbar( aes(x=Group, ymin=nM_mean-nM_std, ymax=nM_mean+nM_std), width=0.4, colour="orange", alpha=0.9, size=1.3) +
+  geom_text(aes(x = max(as.numeric(Group)), y = max(nM_mean+nM_std)), label = paste(nM_p_test$p.signif, nM_p_test$method), hjust = 1, vjust = 1) +
   labs(title = 'Error Bars of Affinity (nM)')
+
 g <- grid.arrange(rank_plot, nM_plot, ncol=2)
 ggsave(g, 
        path = out_dir, 
-       filename = "RankAffinityMeansCompare_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
+       filename = "RankAffinityMeansCompare_plot_STD.png",bg=NULL, width = 10, height = 6, dpi = 300)
+
 
