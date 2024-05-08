@@ -225,7 +225,11 @@ if (length(filtered_df_list) >= 2 ){
   # create Vann diagram of splicing events interesections
   num_groups <- length(target_exons_list)
   circle_colors <- rainbow(num_groups) # Generate colors dynamically based on the number of groups
-  palette <- brewer.pal(num_groups, "Dark2")
+  if (num_groups == 2){
+    palette <- c("#1B9E77", "#D95F02")  # Manually specify two colors
+  } else {
+    palette <- brewer.pal(num_groups, "Dark2")
+  }
   plot_path = file.path(output_dir, "VennDiagram.png")
   venn.diagram(target_exons_list, category.names = comparisons, 
                filename=plot_path,
