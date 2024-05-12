@@ -1,11 +1,12 @@
 library(VennDiagram)
 library(dplyr)
+library(tidyr)
 library(ggplot2)
 library(ggpubr)
 library(gridExtra)
 
-data <- read.csv("/private10/Projects/Efi/CRG/GBM/SplicingAnalysis/SplicingEvents/_forNEanalysis/DMSO_vs_H3B8800/NovelStrongBindingEpitopes_noDups.csv")
-out_dir <- "/private10/Projects/Efi/CRG/GBM/SplicingAnalysis/SplicingEvents/_forNEanalysis/DMSO_vs_H3B8800/"
+data <- read.csv("/private10/Projects/Efi/CRG/SF3B1_WT/SplicingAnalysis/_forNEanalysis/UM_X/SplicingEvents/NovelStrongBindingEpitopes_noDups.csv")
+out_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/SplicingAnalysis/_forNEanalysis/UM_X/SplicingEvents/"
 # data_long <- data %>%
 #   #pivot_longer(cols = starts_with("HLA"), names_to = "HLA_BindingScore", values_to = "Value", values_drop_na = TRUE)
 #   pivot_longer(cols = ends_with("_Rank"), names_to = "HLA_Rank", values_to = "Rank", values_drop_na = T) %>%
@@ -16,7 +17,8 @@ out_dir <- "/private10/Projects/Efi/CRG/GBM/SplicingAnalysis/SplicingEvents/_for
 data_long <- data
 #treatments_desired_order <- c("No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2")
 #treatments_desired_order <- c("NoTreatmentNoSF","NoTreatmentSF","Mock6","Indisulam","PladB","Mock18","5Aza","FB23-2")
-treatments_desired_order <- c("DMSO", "H3B8800")
+#treatments_desired_order <- c("DMSO", "H3B8800")
+treatments_desired_order <- c('DMSO','Indisulam', 'PladienolideB')
 data_long$Group <- factor(data_long$Group, levels = treatments_desired_order)
 
 # Temporary: filter out A3SS|A5SS events since sequences may not be corrected
@@ -181,21 +183,26 @@ summary_data <- data_long %>%
 # calc p-values for Rank
 Rank_p_test <- data_long %>% 
   compare_means(Rank~Group, data=.)
+Rank_p_test$label <- paste(Rank_p_test$group1,"-", Rank_p_test$group2,":",Rank_p_test$p.signif,"(",Rank_p_test$method,")")
+sign_label <- paste(Rank_p_test$label, collapse = '\n')
 # compare Rank between groups
 rank_plot <- ggplot(summary_data) +
   geom_bar( aes(x=Group, y=Rank_mean), stat="identity", fill="skyblue", alpha=0.7) +
   geom_errorbar( aes(x=Group, ymin=Rank_mean-Rank_std, ymax=Rank_mean+Rank_std), width=0.4, colour="orange", alpha=0.9, size=1.3) +
-  geom_text(aes(x = max(as.numeric(Group)), y = max(Rank_mean+Rank_std)), label = paste(Rank_p_test$p.signif, Rank_p_test$method), hjust = 1, vjust = 1) +
+  geom_text(aes(x = max(as.numeric(Group)), y = max(Rank_mean+Rank_std)+0.1), label = sign_label, hjust = 1, vjust = 1) +
+  #geom_text(aes(x = mean(as.numeric(Group)), y = max(Rank_mean+Rank_std)), label = sign_label, hjust = 1, vjust = 1) +
   labs(title = 'Error Bars of Rank')
   
 # calc p-values for nM
 nM_p_test <- data_long %>% 
   compare_means(nM~Group, data=.)
-
+nM_p_test$label <- paste(nM_p_test$group1,"-", nM_p_test$group2,":",nM_p_test$p.signif,"(",nM_p_test$method,")")
+sign_label <- paste(nM_p_test$label, collapse = '\n')
 nM_plot <- ggplot(summary_data) +
   geom_bar( aes(x=Group, y=nM_mean), stat="identity", fill="skyblue", alpha=0.7) +
   geom_errorbar( aes(x=Group, ymin=nM_mean-nM_std, ymax=nM_mean+nM_std), width=0.4, colour="orange", alpha=0.9, size=1.3) +
-  geom_text(aes(x = max(as.numeric(Group)), y = max(nM_mean+nM_std)), label = paste(nM_p_test$p.signif, nM_p_test$method), hjust = 1, vjust = 1) +
+  geom_text(aes(x = max(as.numeric(Group)), y = max(nM_mean+nM_std)+10), label = sign_label, hjust = 1, vjust = 1) +
+  #geom_text(aes(x = mean(as.numeric(Group)), y = max(nM_mean+nM_std)+10), label = sign_label, hjust = 1, vjust = 1) +
   labs(title = 'Error Bars of Affinity (nM)')
 
 g <- grid.arrange(rank_plot, nM_plot, ncol=2)
