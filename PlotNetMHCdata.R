@@ -5,8 +5,8 @@ library(ggplot2)
 library(ggpubr)
 library(gridExtra)
 
-data <- read.csv("/private10/Projects/Efi/CRG/SF3B1_WT/SplicingAnalysis/_forNEanalysis/UM_X/SplicingEvents/NovelStrongBindingEpitopes_noDups.csv")
-out_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/SplicingAnalysis/_forNEanalysis/UM_X/SplicingEvents/"
+data <- read.csv("/private10/Projects/Efi/CRG/SF3B1_WT/SplicingAnalysis/_forNEanalysis/UM/SplicingEvents/NovelStrongBindingEpitopes_noDups.csv")
+out_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/SplicingAnalysis/_forNEanalysis/UM/SplicingEvents/"
 # data_long <- data %>%
 #   #pivot_longer(cols = starts_with("HLA"), names_to = "HLA_BindingScore", values_to = "Value", values_drop_na = TRUE)
 #   pivot_longer(cols = ends_with("_Rank"), names_to = "HLA_Rank", values_to = "Rank", values_drop_na = T) %>%
@@ -18,7 +18,8 @@ data_long <- data
 #treatments_desired_order <- c("No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2")
 #treatments_desired_order <- c("NoTreatmentNoSF","NoTreatmentSF","Mock6","Indisulam","PladB","Mock18","5Aza","FB23-2")
 #treatments_desired_order <- c("DMSO", "H3B8800")
-treatments_desired_order <- c('DMSO','Indisulam', 'PladienolideB')
+#treatments_desired_order <- c('DMSO','Indisulam', 'PladienolideB')
+treatments_desired_order <- c('DMSO','dCEMM1','Indisulam', 'PladienolideB')
 data_long$Group <- factor(data_long$Group, levels = treatments_desired_order)
 
 # Temporary: filter out A3SS|A5SS events since sequences may not be corrected
@@ -134,7 +135,7 @@ upset_plot <- upset(df_reshaped[,-1],
                     order.by = "freq",
                     empty.intersections = "on")
 # save the upset plot
-pdf(file="/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/UpSetPlot_AllTreatments.pdf", onefile=FALSE) # or other device
+pdf(file=paste0(out_dir,"/UpSetPlot_AllTreatments.pdf"), onefile=FALSE) # or other device
 upset_plot
 dev.off()
 
