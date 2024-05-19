@@ -95,11 +95,16 @@ for group1_file, group2_file in zip(group1_files, group2_files):
                         (df_1[columns_to_check_nM] <= aff).any(axis=1)]
     df_2_filteredSB = df_2[(df_2[columns_to_check_rank] <= rank).any(axis=1) &
                         (df_2[columns_to_check_nM] <= aff).any(axis=1)]
-    # Add the splicing index, PSI and TPM values of the specific splicing event in each group
+    # Add the splicing index, Reference Transcript, PSI and TPM values of the specific splicing event in each group
     if user_args.psi_sigma:
+        # add the splicing index
         splicing_index = int(group1_file.strip("/").split("/")[-3]) # get the index of the splicng event according to the 'analyzed' file.
         df_1_filteredSB.insert(1, 'SplicingIndex', splicing_index) # splicing index of event
         df_2_filteredSB.insert(1, 'SplicingIndex', splicing_index) # splicing index of event
+        # add the refernece transcript
+        ref_transcript = analyzed_df.loc[splicing_index, 'Reference.Transcript'] # get the reference transcript of the splicing event
+        df_1_filteredSB.insert(1, 'Reference.Transcript', ref_transcript) # reference transcript of event
+        df_2_filteredSB.insert(1, 'Reference.Transcript', ref_transcript) # reference transcript of event
         # add the Avg.PSI values of the groups
         df_1_filteredSB.insert(1, 'Avg.PSI_PeptideSource', analyzed_df.loc[splicing_index, f'Avg.PSI_{group1_name}']) # PSI of groupA of splicing (peptide source)
         df_1_filteredSB.insert(2, 'Avg.PSI_OtherGroup', analyzed_df.loc[splicing_index, f'Avg.PSI_{group2_name}']) # PSI of groupB of splicing (not peptide source)
@@ -120,11 +125,12 @@ for group1_file, group2_file in zip(group1_files, group2_files):
 # seperate each data frame by the HLA alleles and make symmetric difference between groups
 merged_all = pd.DataFrame()
 for HLA_type in HLA_types:
+    cols_to_keep = ["Splicing Event", "Peptide", "ID",'SplicingIndex','Reference.Transcript', 'Avg.PSI_PeptideSource','Avg.PSI_OtherGroup','Avg.TPM_PeptideSource','Avg.TPM_OtherGroup', f'{HLA_type}_Rank', f'{HLA_type}_nM']
     # filter data frame 1 by rank and affinity values at current HLA allele
-    sb_group1 = group1_merged.loc[(group1_merged[f'{HLA_type}_Rank'] <=rank) & (group1_merged[f'{HLA_type}_nM'] <= aff), ["Splicing Event", "Peptide", "ID",'SplicingIndex', 'Avg.PSI_PeptideSource','Avg.PSI_OtherGroup','Avg.TPM_PeptideSource','Avg.TPM_OtherGroup', f'{HLA_type}_Rank', f'{HLA_type}_nM']]
+    sb_group1 = group1_merged.loc[(group1_merged[f'{HLA_type}_Rank'] <=rank) & (group1_merged[f'{HLA_type}_nM'] <= aff), cols_to_keep]
     sb_group1.insert(0, "Group", group1_name)
     # filter data frame 2 by rank and affinity values at current HLA allele
-    sb_group2 = group2_merged.loc[(group2_merged[f'{HLA_type}_Rank'] <=rank) & (group2_merged[f'{HLA_type}_nM'] <= aff), ["Splicing Event", "Peptide", "ID",'SplicingIndex', 'Avg.PSI_PeptideSource','Avg.PSI_OtherGroup','Avg.TPM_PeptideSource','Avg.TPM_OtherGroup', f'{HLA_type}_Rank', f'{HLA_type}_nM']]
+    sb_group2 = group2_merged.loc[(group2_merged[f'{HLA_type}_Rank'] <=rank) & (group2_merged[f'{HLA_type}_nM'] <= aff), cols_to_keep]
     sb_group2.insert(0, "Group", group2_name)
     # find the symetric difference between the data frames
     symmetric_diff_df = pd.concat([sb_group1[~sb_group1['Peptide'].isin(sb_group2['Peptide'])], sb_group2[~sb_group2['Peptide'].isin(sb_group1['Peptide'])]])
