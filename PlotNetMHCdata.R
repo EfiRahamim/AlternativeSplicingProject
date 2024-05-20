@@ -5,26 +5,24 @@ library(ggplot2)
 library(ggpubr)
 library(gridExtra)
 
-data <- read.csv("/private10/Projects/Efi/CRG/SF3B1_WT/SplicingAnalysis/_forNEanalysis/UM/SplicingEvents/NovelStrongBindingEpitopes_noDups.csv")
-out_dir <- "/private10/Projects/Efi/CRG/SF3B1_WT/SplicingAnalysis/_forNEanalysis/UM/SplicingEvents/"
-# data_long <- data %>%
-#   #pivot_longer(cols = starts_with("HLA"), names_to = "HLA_BindingScore", values_to = "Value", values_drop_na = TRUE)
-#   pivot_longer(cols = ends_with("_Rank"), names_to = "HLA_Rank", values_to = "Rank", values_drop_na = T) %>%
-#   pivot_longer(cols = ends_with("_nM"), names_to = "HLA_nM", values_to = "nM", values_drop_na = T) %>%
-#   mutate(HLA = gsub("_Rank", "", HLA_Rank)) %>%
-#   select(-HLA_Rank, -HLA_nM) %>%
-#   relocate(HLA, .after = 4)
-data_long <- data
+data_long <- read.csv("/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/6-Hours-Treatments/NovelStrongBindingEpitopes_noDups.csv")
+out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/6-Hours-Treatments/'
+
+
 #treatments_desired_order <- c("No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2")
 #treatments_desired_order <- c("NoTreatmentNoSF","NoTreatmentSF","Mock6","Indisulam","PladB","Mock18","5Aza","FB23-2")
 #treatments_desired_order <- c("DMSO", "H3B8800")
 #treatments_desired_order <- c('DMSO','Indisulam', 'PladienolideB')
-treatments_desired_order <- c('DMSO','dCEMM1','Indisulam', 'PladienolideB')
+#treatments_desired_order <- c('DMSO','dCEMM1','Indisulam', 'PladienolideB')
+treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam","PladB")
+controls <- c("NoTreatmentSF","Mock6")
 data_long$Group <- factor(data_long$Group, levels = treatments_desired_order)
 
-# Temporary: filter out A3SS|A5SS events since sequences may not be corrected
-# data_long <- data_long %>%
-#   filter(!grepl('A5SS|A3SS',Splicing.Event))
+# add Annotated/Non-Annotated column
+data_long$Annotated <- ifelse(grepl('Ex.', data_long$Reference.Transcript), 'Non-Annotated', 'Annotated')
+data_long$Annotated <- factor(data_long$Annotated, levels = c('Non-Annotated', 'Annotated'))
+# modify transcripts
+data_long$FixedTranscript <- gsub('Ex.|TSS.','',data_long$Reference.Transcript)
 
 # 1. Plot count of each treatment in each HLA type, divided by Splicing Event
 HLA_treatment_AStype <- data_long %>%
@@ -142,14 +140,15 @@ dev.off()
 # check for peptides that appear in many groups and many HLA allels
 # Count the number of unique groups and HLA's for each peptide 
 candidate_peptides <- data_long %>%
-  #filter(!grepl('A5SS|A3SS', Splicing.Event)) %>%
   rowwise()%>%
   mutate(Gene=strsplit(ID,"_")[[1]][1])%>%
-  group_by(Peptide, Gene, Splicing.Event) %>%
+  group_by(Peptide, Gene, Splicing.Event, Annotated) %>%
   summarize(Group_Count = n_distinct(Group),
             Groups = paste(unique(Group), collapse = ", "),
             HLA_Count = n_distinct(HLA),
             HLAs = paste(unique(HLA), collapse = ", "),
+            #Transcript_Counts = n_distinct(FixedTranscript),
+            #Transcripts = paste(unique(FixedTranscript), collapse = ", "),
             Avg.Rank = mean(Rank),
             Avg.nM = mean(nM),
             Avg.PSI_PeptideSource = mean(Avg.PSI_PeptideSource),
@@ -163,7 +162,18 @@ write.csv(candidate_peptides,
           file = paste0(out_dir, "PeptidesCandidates.csv"),
           row.names = F)
 
-# count novel NE in each group
+# count novel NE in case groups by Annotated dividing
+data_long %>%
+  filter(!Group %in% controls) %>%
+  group_by(Peptide, Group) %>%
+  summarise(count = n()) %>%
+  ggplot(aes(x=Group, fill = Group))+
+  geom_bar()+
+  labs(title='Novel Neo-Epitopes Counts',
+       subtitle = 'Thresholds: %Rank < 0.5, Affinity (nM) < 50',
+       fill = 'Splice Junction Type')
+
+# count novel NE in all groups
 counts_plot <- ggplot(data_long, aes(x=Group, fill=Group))+
          geom_bar()+
   labs(title='Novel Neo-Epitopes Counts',
