@@ -8,6 +8,7 @@ parser$add_argument("-file_name", action="store", dest="output_file_name", help=
 parser$add_argument("-psi", action="store", dest="delta_PSI", help="ΔPSI (in precentages) for filtering. default: 20.", type="integer", default=20)
 parser$add_argument("-pval", action="store", dest="p_value", help="P-value for filtering. default: 0.05", type="double", default=0.05)
 parser$add_argument("-fdr", action="store", dest="fdr", help="FDR for filtering. default: 0.05", type="double", default=0.05)
+parser$add_argument("-ss", action="store", dest="ss", help="Required precentage of supporting samples for each splicing event. default: 0.5", type="double", default=0.5)
 parser$add_argument("--novelSS", action="store_true", dest="novelSS", help="PSI-Sigma results include novel transcripts. Plot will be generated for results with and without novel transcripts.")
 parser$add_argument("-gene_prefix", action="store", dest="gene_prefix", help="Prefix of novel genes. default: MSTRG", default="MSTRG")
 parser$add_argument("-ncol", action="store", dest="ncol", help="Number of columns to plot in the volcano plots. default: 3", type="integer", default=3)
@@ -23,12 +24,13 @@ print(user_args)
 
 # # DEBUG Arguments
 # PSI_Sigma_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/PSI-Sigma/All/NoTreatments_vs_Mock_matched/"
-# output_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/NoTreatments_vs_Mock_matched/"
+# output_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/NoTreatments_vs_Mock_matched/temp/"
 # output_dir_name <- NULL
 # output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
 # delta_PSI = 20
 # p_value = 0.05
 # fdr = 0.05
+# ss = 1
 # ncol_plot <- 3
 # novelSS = F
 # gene_prefix = "MSTRG"
@@ -48,6 +50,7 @@ output_file_name <- user_args$output_file_name
 delta_PSI <- user_args$delta_PSI
 p_value <- user_args$p_value
 fdr <- user_args$fdr
+ss <- user_args$ss
 novelSS <- user_args$novelSS
 gene_prefix <- user_args$gene_prefix
 ncol_plot <- user_args$ncol
@@ -163,24 +166,35 @@ for (comparison in comparisons){
   # filter results by TPM 
   filtered_df_list[[comparison]] <- filter(filtered_df_list[[comparison]], 
                                            across(all_of(c(TPM_mean_groupA,TPM_mean_groupB)), ~. >= tpm))
+  # filter results by supporting smples
+  # get the number of samples from group A and B
+  # check if the number of sample that support each spliicng event from both groups are at least as the user asked for
+  groupA_num <- length(subset(group_info, Group==groupA)$Sample)
+  groupB_num <- length(subset(group_info, Group==groupB)$Sample)
+  filtered_df_list[[comparison]] <- filter(filtered_df_list[[comparison]], N/groupA_num >= ss & T/groupB_num >= ss)
+  
   # add Avg. PSI value for each group
   avgPSI_groupA <- paste0('Avg.PSI_', groupA)
   avgPSI_groupB <- paste0('Avg.PSI_', groupB)
   filtered_df_list[[comparison]][[avgPSI_groupA]] <- sapply(filtered_df_list[[comparison]]$N.Values, calculate_average_psi)
   filtered_df_list[[comparison]][[avgPSI_groupB]] <- sapply(filtered_df_list[[comparison]]$T.Values, calculate_average_psi)
   
+  
   # write filtered results to csv file
   filtered_results_file <- file.path(output_dir, paste0("SplicingEventsFiltered-",comparison,"-PSI",delta_PSI,"_Pvalue", p_value,"_FDR", fdr,"_TPM",tpm, ".csv"))
   write.csv(filtered_df_list[[comparison]], file=filtered_results_file, row.names = F) # write filtered results file
   full_df_list[[comparison]]$Comparison <- comparison
-  filtered_df_list[[comparison]]$Comparison <- comparison
   merged_results <- rbind(merged_results, full_df_list[[comparison]])
+  if (nrow(filtered_df_list[[comparison]]) > 0){
+  filtered_df_list[[comparison]]$Comparison <- comparison
   merged_results_filtered <- rbind(merged_results_filtered, filtered_df_list[[comparison]]%>%select(-TPM_mean_groupA, -TPM_mean_groupB, -TPM_std_groupA, -TPM_std_groupB, -avgPSI_groupA, -avgPSI_groupB))
   target_exons_list[[comparison]] <- paste0(filtered_df_list[[comparison]]$Target.Exon,
                                             filtered_df_list[[comparison]]$FixedTranscript,
                                             filtered_df_list[[comparison]]$Event.Type)
+  } else {
+    filtered_df_list <- filtered_df_list[!names(filtered_df_list) %in% comparison]
+  }
 }
-
 # create volcano plots
 volcano_plot <- ggplot(merged_results, aes(x = ΔPSI...., y = -log10(T.test.p.value))) +
   geom_point(aes(color = ifelse(ΔPSI.... >= delta_PSI & T.test.p.value < p_value, "Inclusion",
@@ -223,7 +237,7 @@ if (length(filtered_df_list) == 1 ){
 }
 if (length(filtered_df_list) >= 2 ){
   # create Vann diagram of splicing events interesections
-  num_groups <- length(target_exons_list)
+  num_groups <- length(filtered_df_list)
   circle_colors <- rainbow(num_groups) # Generate colors dynamically based on the number of groups
   if (num_groups == 2){
     palette <- c("#1B9E77", "#D95F02")  # Manually specify two colors
@@ -231,7 +245,7 @@ if (length(filtered_df_list) >= 2 ){
     palette <- brewer.pal(num_groups, "Dark2")
   }
   plot_path = file.path(output_dir, "VennDiagram.png")
-  venn.diagram(target_exons_list, category.names = comparisons, 
+  venn.diagram(target_exons_list, category.names = names(filtered_df_list), 
                filename=plot_path,
                disable.logging=T,
                force.unique = T,
