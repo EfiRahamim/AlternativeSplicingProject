@@ -5,8 +5,8 @@ library(ggplot2)
 library(ggpubr)
 library(gridExtra)
 
-data_long <- read.csv("/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/6-Hours-Treatments/NovelStrongBindingEpitopes_noDups.csv")
-out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/6-Hours-Treatments/'
+data_long <- read.csv("/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/18-Hours-Treatments/NovelStrongBindingEpitopes_noDups.csv")
+out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/18-Hours-Treatments/'
 
 
 #treatments_desired_order <- c("No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2")
@@ -14,8 +14,9 @@ out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvent
 #treatments_desired_order <- c("DMSO", "H3B8800")
 #treatments_desired_order <- c('DMSO','Indisulam', 'PladienolideB')
 #treatments_desired_order <- c('DMSO','dCEMM1','Indisulam', 'PladienolideB')
-treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam","PladB")
-controls <- c("NoTreatmentSF","Mock6")
+#treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam","PladB")
+treatments_desired_order <- c("NoTreatmentSF","Mock18","5Aza","FB23-2")
+controls <- c("NoTreatmentSF","Mock18")
 data_long$Group <- factor(data_long$Group, levels = treatments_desired_order)
 
 # add Annotated/Non-Annotated column
@@ -163,21 +164,29 @@ write.csv(candidate_peptides,
           row.names = F)
 
 # count novel NE in case groups by Annotated dividing
-data_long %>%
+annotated_plot <- data_long %>%
   filter(!Group %in% controls) %>%
-  group_by(Peptide, Group) %>%
+  group_by(Peptide, Group, Annotated) %>%
   summarise(count = n()) %>%
-  ggplot(aes(x=Group, fill = Group))+
+  #mutate(g_annotated=paste(Group,'-',Annotated))%>%
+  ggplot(aes(x=Group, fill = Annotated))+
   geom_bar()+
+  scale_fill_brewer(palette = "Paired")+
   labs(title='Novel Neo-Epitopes Counts',
        subtitle = 'Thresholds: %Rank < 0.5, Affinity (nM) < 50',
        fill = 'Splice Junction Type')
+annotated_plot
+ggsave(annotated_plot, 
+       path = out_dir, 
+       filename = "AnnotatedNeoEpitopesCounts_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
+
 
 # count novel NE in all groups
 counts_plot <- ggplot(data_long, aes(x=Group, fill=Group))+
          geom_bar()+
   labs(title='Novel Neo-Epitopes Counts',
        subtitle = 'Thresholds: %Rank < 0.5, Affinity (nM) < 50')
+counts_plot
 ggsave(counts_plot, 
        path = out_dir, 
        filename = "NovelNeoEpitopesCounts_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
