@@ -115,13 +115,16 @@ for group1_file, group2_file in zip(group1_files, group2_files):
         df_1_filteredSB.insert(2, 'Avg.TPM_OtherGroup', analyzed_df.loc[splicing_index, f'TPM_mean_{group2_name}']) # TPM of groupB of splicing (not peptide source)
         df_2_filteredSB.insert(1, 'Avg.TPM_PeptideSource', analyzed_df.loc[splicing_index, f'TPM_mean_{group2_name}']) # TPM of groupA of splicing (peptide source)
         df_2_filteredSB.insert(2, 'Avg.TPM_OtherGroup', analyzed_df.loc[splicing_index, f'TPM_mean_{group1_name}']) # TPM of groupB of splicing (not peptide source)
-    if group1_merged.empty:
-        group1_merged = df_1_filteredSB
-    elif group2_merged.empty:
-        group2_merged = df_2_filteredSB
-    else:
+    
+    if not group1_merged.empty and not group2_merged.empty:
         group1_merged = pd.concat([group1_merged, df_1_filteredSB], ignore_index=True)
         group2_merged = pd.concat([group2_merged, df_2_filteredSB], ignore_index=True)
+    else:
+        if group1_merged.empty:
+            group1_merged = df_1_filteredSB
+        if group2_merged.empty:
+            group2_merged = df_2_filteredSB
+
 # seperate each data frame by the HLA alleles and make symmetric difference between groups
 merged_all = pd.DataFrame()
 for HLA_type in HLA_types:
