@@ -5,8 +5,8 @@ library(ggplot2)
 library(ggpubr)
 library(gridExtra)
 
-data_long <- read.csv("/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/18-Hours-Treatments/NovelStrongBindingEpitopes_noDups.csv")
-out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/18-Hours-Treatments/'
+data_long <- read.csv("/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/AllSamplesOnly/Normal_vs_Treatments/NovelStrongBindingEpitopes_noDups.csv")
+out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/AllSamplesOnly/Normal_vs_Treatments/'
 
 
 #treatments_desired_order <- c("No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2")
@@ -14,10 +14,17 @@ out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvent
 #treatments_desired_order <- c("DMSO", "H3B8800")
 #treatments_desired_order <- c('DMSO','Indisulam', 'PladienolideB')
 #treatments_desired_order <- c('DMSO','dCEMM1','Indisulam', 'PladienolideB')
-#treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam","PladB")
-treatments_desired_order <- c("NoTreatmentSF","Mock18","5Aza","FB23-2")
-controls <- c("NoTreatmentSF","Mock18")
+#treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam","PladB", 'Madrasin', 'H3B-8800')
+#treatments_desired_order <- c("NoTreatmentSF","Mock18","5Aza","FB23-2")
+treatments_desired_order <- c('NormalMock', 'NormalIndisulam','NormalPladB','Mock6','Indisulam','PladB')
+#controls <- c("NoTreatmentSF","Mock18")
+#controls <- c("NoTreatmentSF","Mock6")
+controls <- c('NormalMock', 'NormalIndisulam','NormalPladB')
 data_long$Group <- factor(data_long$Group, levels = treatments_desired_order)
+
+# filter out peptides of control groups
+data_long <- filter(data_long, !(Group %in% controls))
+
 
 # add Annotated/Non-Annotated column
 data_long$Annotated <- ifelse(grepl('Ex.', data_long$Reference.Transcript), 'Non-Annotated', 'Annotated')
@@ -170,11 +177,17 @@ annotated_plot <- data_long %>%
   summarise(count = n()) %>%
   #mutate(g_annotated=paste(Group,'-',Annotated))%>%
   ggplot(aes(x=Group, fill = Annotated))+
-  geom_bar()+
+  geom_bar(position="fill")+
   scale_fill_brewer(palette = "Paired")+
   labs(title='Novel Neo-Epitopes Counts',
        subtitle = 'Thresholds: %Rank < 0.5, Affinity (nM) < 50',
-       fill = 'Splice Junction Type')
+       fill = 'Splice Junction Type',
+       y='Propotion')+
+  geom_text(
+    aes(label=signif(..count.. / tapply(..count.., ..x.., sum)[as.character(..x..)], digits=3)),
+    stat="count",
+    position=position_fill(vjust=0.5))
+  #geom_text(stat = "count", aes(label = after_stat(count)), position=position_stack(0.5))
 annotated_plot
 ggsave(annotated_plot, 
        path = out_dir, 
