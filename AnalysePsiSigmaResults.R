@@ -23,23 +23,23 @@ stopifnot(!is.null(user_args$PSI_Sigma_dir) && !is.null(user_args$output_dir))
 print(user_args)
 
 # # DEBUG Arguments
-# PSI_Sigma_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/PSI-Sigma/All/NoTreatments_vs_Mock_matched/"
-# output_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/NoTreatments_vs_Mock_matched/temp/"
+# PSI_Sigma_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/PSI-Sigma/All/6-Hours-Treatments/"
+# output_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/AllSamplesOnly/6-Hours-Treatments/"
 # output_dir_name <- NULL
 # output_file_name <- "PSI-Sigma_r10_ir3.sorted.txt"
 # delta_PSI = 20
 # p_value = 0.05
 # fdr = 0.05
 # ss = 1
-# ncol_plot <- 3
+# ncol_plot <- 4
 # novelSS = F
 # gene_prefix = "MSTRG"
 # filter_tm <- F
 # tm_table <- "/private10/Projects/Efi/General/transmembrane_Nov23.csv"
-# salmon_dir <- "/private10/Projects/Efi/AML/Salmon_gencode_v28/"
+# salmon_dir <- "/private10/Projects/Efi/AML/Salmon_gencode_v28"
 # salmon_suffix = ".quant.genes.sf"
-# group_info_file <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/PSI-Sigma/All/NoTreatments_vs_Mock_matched/Input/GroupInfo.txt"
-# tpm <- 0
+# group_info_file <- "/private10/Projects/Efi/AML/Salmon_gencode_v28/GroupInfo-All.txt"
+# tpm <- 10
 
 
 # Arguments assignment
@@ -66,6 +66,10 @@ library(ggplot2)
 library(RColorBrewer)
 library(VennDiagram)
 
+# Check if output_dir exists, if not - create
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir, recursive = TRUE)
+}
 
 # read results files into list of data frames
 if (!is.null(output_dir_name) ){
@@ -97,7 +101,7 @@ for (dir in output_dirs){
     print(paste0("Merging with TM table: ", nrow(df), " results."))
   }
   full_df_list[[comparison]] <- df
-  filtered_df_list[[comparison]] <- subset(df,abs(ΔPSI....)>= delta_PSI & T.test.p.value < p_value & FDR..BH. < fdr & T > 0 & N > 0 )
+  filtered_df_list[[comparison]] <- subset(df,abs(ΔPSI....)>= delta_PSI & T.test.p.value <= p_value & FDR..BH. <= fdr & T > 0 & N > 0 )
 }
 
 merged_results <- data.frame(matrix(nrow = 0, ncol = 15))
@@ -220,7 +224,7 @@ if (length(filtered_df_list) == 1 ){
     geom_text(stat = "count", aes(label = after_stat(count)), position=position_stack(0.5)) +
     #theme_minimal()+
     labs(title = "PSI-Sigma results: Differential Splicing Events",
-         subtitle = "|ΔPSI| > 20%, P-value & FDR < 0.05", y = "Count")
+         subtitle = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value), y = "Count")
   filtered_splicing_event_barplot
   ggsave(filename="SignificantSplicingEvents.png", plot = filtered_splicing_event_barplot, path=output_dir, width = 10, height = 6, dpi = 300)
   
