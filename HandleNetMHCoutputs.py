@@ -101,6 +101,10 @@ for group1_file, group2_file in zip(group1_files, group2_files):
         splicing_index = int(group1_file.strip("/").split("/")[-3]) # get the index of the splicng event according to the 'analyzed' file.
         df_1_filteredSB.insert(1, 'SplicingIndex', splicing_index) # splicing index of event
         df_2_filteredSB.insert(1, 'SplicingIndex', splicing_index) # splicing index of event
+        # add the ExonType (NMD or Not)
+        exon_type = analyzed_df.loc[splicing_index, 'Exon.Type']
+        df_1_filteredSB.insert(1, 'Exon.Type', exon_type) # exon type of event
+        df_2_filteredSB.insert(1, 'Exon.Type', exon_type) # exon type of event
         # add the refernece transcript
         ref_transcript = analyzed_df.loc[splicing_index, 'Reference.Transcript'] # get the reference transcript of the splicing event
         df_1_filteredSB.insert(1, 'Reference.Transcript', ref_transcript) # reference transcript of event
@@ -128,7 +132,7 @@ for group1_file, group2_file in zip(group1_files, group2_files):
 # seperate each data frame by the HLA alleles and make symmetric difference between groups
 merged_all = pd.DataFrame()
 for HLA_type in HLA_types:
-    cols_to_keep = ["Splicing Event", "Peptide", "ID",'SplicingIndex','Reference.Transcript', 'Avg.PSI_PeptideSource','Avg.PSI_OtherGroup','Avg.TPM_PeptideSource','Avg.TPM_OtherGroup', f'{HLA_type}_Rank', f'{HLA_type}_nM']
+    cols_to_keep = ["Splicing Event", "Peptide", "ID",'SplicingIndex','Exon.Type','Reference.Transcript', 'Avg.PSI_PeptideSource','Avg.PSI_OtherGroup','Avg.TPM_PeptideSource','Avg.TPM_OtherGroup', f'{HLA_type}_Rank', f'{HLA_type}_nM']
     # filter data frame 1 by rank and affinity values at current HLA allele
     sb_group1 = group1_merged.loc[(group1_merged[f'{HLA_type}_Rank'] <=rank) & (group1_merged[f'{HLA_type}_nM'] <= aff), cols_to_keep]
     sb_group1.insert(0, "Group", group1_name)
