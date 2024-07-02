@@ -5,21 +5,30 @@ library(ggplot2)
 library(ggpubr)
 library(gridExtra)
 
-data_long <- read.csv("/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/AllSamplesOnly/Normal_vs_Treatments/NovelStrongBindingEpitopes_noDups.csv")
-out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/AllSamplesOnly/Normal_vs_Treatments/'
+# Output directory for plotting
+out_dir <- '/private10/Projects/Efi/CRG/GBM/SplicingAnalysis/SplicingEvents/_forNEanalysis/DMSO_vs_H3B8800/'
 
-
+# Define the control and treatments groups
 #treatments_desired_order <- c("No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2")
 #treatments_desired_order <- c("NoTreatmentNoSF","NoTreatmentSF","Mock6","Indisulam","PladB","Mock18","5Aza","FB23-2")
 #treatments_desired_order <- c("DMSO", "H3B8800")
 #treatments_desired_order <- c('DMSO','Indisulam', 'PladienolideB')
 #treatments_desired_order <- c('DMSO','dCEMM1','Indisulam', 'PladienolideB')
-#treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam","PladB", 'Madrasin', 'H3B-8800')
+#treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam",'PladB')
+#treatments_desired_order <- c('Indisulam')
 #treatments_desired_order <- c("NoTreatmentSF","Mock18","5Aza","FB23-2")
-treatments_desired_order <- c('NormalMock', 'NormalIndisulam','NormalPladB','Mock6','Indisulam','PladB')
+#treatments_desired_order <- c('NormalMock', 'NormalIndisulam','NormalPladB')#,'Mock6','Indisulam','PladB')
 #controls <- c("NoTreatmentSF","Mock18")
 #controls <- c("NoTreatmentSF","Mock6")
-controls <- c('NormalMock', 'NormalIndisulam','NormalPladB')
+#controls <- c('Mock18')#, 'NormalIndisulam','NormalPladB')
+
+treatments_desired_order <- c('DMSO', 'H3B8800')
+controls <- c('DMSO')
+
+# find the neoepitopes file and read it
+neo_epitopes_file = list.files(out_dir, pattern = 'NovelStrongBindingEpitopes_noDups.csv', full.names = TRUE)
+data_long <- read.csv(neo_epitopes_file)
+# treat groups names as factor
 data_long$Group <- factor(data_long$Group, levels = treatments_desired_order)
 
 # filter out peptides of control groups
@@ -134,7 +143,7 @@ df_reshaped <- df_counts %>%
 
 df_reshaped <- as.data.frame(df_reshaped)
 
-str(df_reshaped)
+#str(df_reshaped)
 upset_plot <- upset(df_reshaped[,-1], 
                     sets=names(df_reshaped)[-1],
                     main.bar.color = "#4e79a7",
@@ -203,6 +212,7 @@ counts_plot
 ggsave(counts_plot, 
        path = out_dir, 
        filename = "NovelNeoEpitopesCounts_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
+
 
 ### create plots of Rank and nM comparisons
 summary_data <- data_long %>%
