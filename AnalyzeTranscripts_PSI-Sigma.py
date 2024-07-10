@@ -205,12 +205,47 @@ def SaveSeqAsFastaFiles(AA_inclusion_seq, AA_exclusion_seq, files_dir, row):
     f.write(inclusion_record)
   with open(exclusion_path, 'w') as f:
     f.write(exclusion_record)
+def EventWasChecked(output_dir, gene_name, transcript_id, splicing_event, index):
+  # create the expected path of the event files
+  splicing_event = splicing_event.replace("|", "_") # for 'TSS|' cases
+  if splicing_event == 'IR (overlapping region)':
+    splicing_event = 'IR_OLR'
+  event_path = os.path.join(output_dir, 'SplicingEventsFiles', gene_name, transcript_id,splicing_event, str(index))
+  # if path does not exist - continue
+  if not os.path.isdir(event_path):
+    return False
+  else:
+    return event_path
+
+def getAAseqFromFiles(files_dir):
+  for filename in os.listdir(files_dir):
+    filepath = os.path.join(files_dir, filename)
+    for record in SeqIO.parse(filepath, "fasta"):
+      sequence = str(record.seq)
+    if filename.startswith("Exclusion_"):
+      exclusion_seq = sequence
+    elif filename.startswith("Inclusion_"):
+      inclusion_seq = sequence
+    else:
+      return None,None
+  return inclusion_seq, exclusion_seq
+
 def run_with_GTF(index,row):
   global transcripts_dict, cds_dict
   # remove non-required prefixes
   transcript_id = row['Reference.Transcript'].replace("Ex.", "")
   transcript_id = transcript_id.replace("TSS.", "")
   chr = row['Event.Region'].split(":")[0]
+  # check if row was already proccessed
+  check_event = EventWasChecked(output_dir, row['Gene.Symbol'], transcript_id, row['Event.Type'], index)
+  if check_event:
+    print(f"Event {index} was already analyzed. Files can be found at: {check_event}")
+    row['Transcript found?'] = 'yes'
+    row['Exon in transcript?'] = 'yes'
+    row['Exon in CDS?'] = 'yes'
+    row['Exon appear more than once in CDS?'] = 'no'
+    row['InclusionAAseq'], row['ExclusionAAseq'] = getAAseqFromFiles(check_event)
+    return row
   # get transcript seq
   if transcript_id in transcripts_dict.keys(): # use prepared sequence
     transcript_seq = transcripts_dict[transcript_id]
@@ -280,6 +315,7 @@ merged_results = merged_results.rename(columns={merged_results.columns[8]: 'dPSI
 merged_results['Transcript found?'] = 'NA'
 merged_results['Exon in transcript?'] = 'NA'
 merged_results['Exon in CDS?'] = 'NA'
+merged_results['Exon appear more than once in CDS?'] = 'NA'
 merged_results['Exon devide by 3?'] = 'NA'
 merged_results['InclusionAAseq'] = 'NA'
 merged_results['ExclusionAAseq'] = 'NA'
