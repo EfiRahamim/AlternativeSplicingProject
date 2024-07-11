@@ -6,23 +6,23 @@ library(ggpubr)
 library(gridExtra)
 
 # Output directory for plotting
-out_dir <- '/private10/Projects/Efi/CRG/GBM/SplicingAnalysis/SplicingEvents/_forNEanalysis/DMSO_vs_H3B8800/'
+out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/AllSamplesOnly/6-Hours-Treatments/'
 
 # Define the control and treatments groups
-#treatments_desired_order <- c("No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2")
-#treatments_desired_order <- c("NoTreatmentNoSF","NoTreatmentSF","Mock6","Indisulam","PladB","Mock18","5Aza","FB23-2")
+# "No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2"
+# "NoTreatmentNoSF","NoTreatmentSF","Mock6","Indisulam","PladB","Mock18","5Aza","FB23-2")
 #treatments_desired_order <- c("DMSO", "H3B8800")
 #treatments_desired_order <- c('DMSO','Indisulam', 'PladienolideB')
 #treatments_desired_order <- c('DMSO','dCEMM1','Indisulam', 'PladienolideB')
-#treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam",'PladB')
+treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam",'PladB', 'Madrasin','H3B-8800')
 #treatments_desired_order <- c('Indisulam')
 #treatments_desired_order <- c("NoTreatmentSF","Mock18","5Aza","FB23-2")
 #treatments_desired_order <- c('NormalMock', 'NormalIndisulam','NormalPladB')#,'Mock6','Indisulam','PladB')
 #controls <- c("NoTreatmentSF","Mock18")
-#controls <- c("NoTreatmentSF","Mock6")
+controls <- c("NoTreatmentSF","Mock6")
 #controls <- c('Mock18')#, 'NormalIndisulam','NormalPladB')
 
-treatments_desired_order <- c('DMSO', 'H3B8800')
+treatments_desired_order <- c('DMSO', 'Indisulam','PladienolideB','dCEMM1')
 controls <- c('DMSO')
 
 # find the neoepitopes file and read it
@@ -159,7 +159,7 @@ dev.off()
 candidate_peptides <- data_long %>%
   rowwise()%>%
   mutate(Gene=strsplit(ID,"_")[[1]][1])%>%
-  group_by(Peptide, Gene, Splicing.Event, Annotated) %>%
+  group_by(Peptide, Gene, Splicing.Event, Annotated)%>%#, Exon.Type) %>%
   summarize(Group_Count = n_distinct(Group),
             Groups = paste(unique(Group), collapse = ", "),
             HLA_Count = n_distinct(HLA),
@@ -202,16 +202,25 @@ ggsave(annotated_plot,
        path = out_dir, 
        filename = "AnnotatedNeoEpitopesCounts_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
 
-
-# count novel NE in all groups
-counts_plot <- ggplot(data_long, aes(x=Group, fill=Group))+
-         geom_bar()+
-  labs(title='Novel Neo-Epitopes Counts',
-       subtitle = 'Thresholds: %Rank < 0.5, Affinity (nM) < 50')
-counts_plot
-ggsave(counts_plot, 
+comparisons <- combn(setdiff(treatments_desired_order, controls), 2,simplify = FALSE)
+# compare nM and Rank in each treatment
+p_rank <- ggplot(data_long, aes(x=Group, y=Rank, fill=Group))+
+  geom_boxplot()+
+  theme_bw()+
+  theme(legend.position = "none")+
+  labs(title = "Affinity Comparison - %Rank")+
+  stat_compare_means(method="t.test", comparisons = comparisons, label = 'p.signif')
+p_rank
+p_nM <-ggplot(data_long, aes(x=Group, y=nM, fill=Group))+
+  geom_boxplot()+
+  theme_bw()+
+  labs(title = "Affinity Comparison - nM")+
+  stat_compare_means(method="t.test", comparisons = comparisons, label = 'p.signif')
+p_nM
+g<-grid.arrange(p_rank, p_nM, ncol=2)
+ggsave(g, 
        path = out_dir, 
-       filename = "NovelNeoEpitopesCounts_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
+       filename = "Rank_nM_compare_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
 
 
 ### create plots of Rank and nM comparisons
