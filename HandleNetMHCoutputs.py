@@ -62,6 +62,7 @@ if not matching_files:
     raise FileNotFoundError(f"No file matching the pattern {analyzed_file_pattern}")
 analyzed_file = matching_files[0]
 analyzed_df = pd.read_csv(analyzed_file)
+analyzed_df.columns.values[0] = 'EventIndex' # change the name of the first column
 # filter each file by rank and affinity score and merge them all (for each group)
 for group1_file, group2_file in zip(group1_files, group2_files):
     # get type of splicing event
@@ -102,23 +103,28 @@ for group1_file, group2_file in zip(group1_files, group2_files):
         df_1_filteredSB.insert(1, 'SplicingIndex', splicing_index) # splicing index of event
         df_2_filteredSB.insert(1, 'SplicingIndex', splicing_index) # splicing index of event
         # add the ExonType (NMD or Not)
-        exon_type = analyzed_df.loc[splicing_index, 'Exon.Type']
+        #exon_type = analyzed_df.loc[splicing_index, 'Exon.Type']
+        if analyzed_df.loc[analyzed_df['EventIndex'] == splicing_index, 'Exon.Type'].empty:
+            print(f"Could not find index {splicing_index} in {analyzed_file}. Skipping but should be checked.")
+            continue
+        exon_type = analyzed_df.loc[analyzed_df['EventIndex'] == splicing_index, 'Exon.Type'].values[0]
         df_1_filteredSB.insert(1, 'Exon.Type', exon_type) # exon type of event
         df_2_filteredSB.insert(1, 'Exon.Type', exon_type) # exon type of event
         # add the refernece transcript
-        ref_transcript = analyzed_df.loc[splicing_index, 'Reference.Transcript'] # get the reference transcript of the splicing event
+        #ref_transcript = analyzed_df.loc[splicing_index, 'Reference.Transcript'] # get the reference transcript of the splicing event
+        ref_transcript = analyzed_df.loc[analyzed_df['EventIndex'] == splicing_index, 'Reference.Transcript'].values[0]
         df_1_filteredSB.insert(1, 'Reference.Transcript', ref_transcript) # reference transcript of event
         df_2_filteredSB.insert(1, 'Reference.Transcript', ref_transcript) # reference transcript of event
         # add the Avg.PSI values of the groups
-        df_1_filteredSB.insert(1, 'Avg.PSI_PeptideSource', analyzed_df.loc[splicing_index, f'Avg.PSI_{group1_name}']) # PSI of groupA of splicing (peptide source)
-        df_1_filteredSB.insert(2, 'Avg.PSI_OtherGroup', analyzed_df.loc[splicing_index, f'Avg.PSI_{group2_name}']) # PSI of groupB of splicing (not peptide source)
-        df_2_filteredSB.insert(1, 'Avg.PSI_PeptideSource', analyzed_df.loc[splicing_index, f'Avg.PSI_{group2_name}']) # PSI of groupA of splicing (peptide source)
-        df_2_filteredSB.insert(2, 'Avg.PSI_OtherGroup', analyzed_df.loc[splicing_index, f'Avg.PSI_{group1_name}']) # PSI of groupB of splicing (not peptide source)
+        df_1_filteredSB.insert(1, 'Avg.PSI_PeptideSource', analyzed_df.loc[analyzed_df['EventIndex'] == splicing_index, f'Avg.PSI_{group1_name}'].values[0]) # PSI of groupA of splicing (peptide source)
+        df_1_filteredSB.insert(2, 'Avg.PSI_OtherGroup', analyzed_df.loc[analyzed_df['EventIndex'] == splicing_index, f'Avg.PSI_{group2_name}'].values[0]) # PSI of groupB of splicing (not peptide source)
+        df_2_filteredSB.insert(1, 'Avg.PSI_PeptideSource', analyzed_df.loc[analyzed_df['EventIndex'] == splicing_index, f'Avg.PSI_{group2_name}'].values[0]) # PSI of groupA of splicing (peptide source)
+        df_2_filteredSB.insert(2, 'Avg.PSI_OtherGroup', analyzed_df.loc[analyzed_df['EventIndex'] == splicing_index, f'Avg.PSI_{group1_name}'].values[0]) # PSI of groupB of splicing (not peptide source)
         # add the TPM values of the groups
-        df_1_filteredSB.insert(1, 'Avg.TPM_PeptideSource', analyzed_df.loc[splicing_index, f'TPM_mean_{group1_name}']) # TPM of groupA of splicing (peptide source)
-        df_1_filteredSB.insert(2, 'Avg.TPM_OtherGroup', analyzed_df.loc[splicing_index, f'TPM_mean_{group2_name}']) # TPM of groupB of splicing (not peptide source)
-        df_2_filteredSB.insert(1, 'Avg.TPM_PeptideSource', analyzed_df.loc[splicing_index, f'TPM_mean_{group2_name}']) # TPM of groupA of splicing (peptide source)
-        df_2_filteredSB.insert(2, 'Avg.TPM_OtherGroup', analyzed_df.loc[splicing_index, f'TPM_mean_{group1_name}']) # TPM of groupB of splicing (not peptide source)
+        df_1_filteredSB.insert(1, 'Avg.TPM_PeptideSource', analyzed_df.loc[analyzed_df['EventIndex'] == splicing_index, f'TPM_mean_{group1_name}'].values[0]) # TPM of groupA of splicing (peptide source)
+        df_1_filteredSB.insert(2, 'Avg.TPM_OtherGroup', analyzed_df.loc[analyzed_df['EventIndex'] == splicing_index, f'TPM_mean_{group2_name}'].values[0]) # TPM of groupB of splicing (not peptide source)
+        df_2_filteredSB.insert(1, 'Avg.TPM_PeptideSource', analyzed_df.loc[analyzed_df['EventIndex'] == splicing_index, f'TPM_mean_{group2_name}'].values[0]) # TPM of groupA of splicing (peptide source)
+        df_2_filteredSB.insert(2, 'Avg.TPM_OtherGroup', analyzed_df.loc[analyzed_df['EventIndex'] == splicing_index, f'TPM_mean_{group1_name}'].values[0]) # TPM of groupB of splicing (not peptide source)
     
     if not group1_merged.empty and not group2_merged.empty:
         group1_merged = pd.concat([group1_merged, df_1_filteredSB], ignore_index=True)
