@@ -4,7 +4,7 @@
 # 5. Count the exons that has been found and the exons that hasent.
 # 6. Create inclusion and exclusion amino acid sequences for cases of alternative exo within the CDS
 
-import csv, requests, multiprocessing, sys, os, subprocess, re, time, argparse
+import csv, requests, multiprocessing, sys, os, subprocess, re, time, argparse, glob
 import pandas as pd
 from Bio import SeqIO, Seq
 from Bio.Seq import Seq
@@ -218,15 +218,20 @@ def EventWasChecked(output_dir, gene_name, transcript_id, splicing_event, index)
     return event_path
 
 def getAAseqFromFiles(files_dir):
-  for filename in os.listdir(files_dir):
-    filepath = os.path.join(files_dir, filename)
-    for record in SeqIO.parse(filepath, "fasta"):
+  inclusion_seq = ''
+  exclusion_seq = ''
+  fasta_files = glob.glob(os.path.join(files_dir, '*.fasta'))
+  for file in fasta_files:
+    for record in SeqIO.parse(file, "fasta"):
       sequence = str(record.seq)
-    if filename.startswith("Exclusion_"):
+    if os.path.basename(file).startswith("Exclusion_"):
+      print("Exclusion file was found")
       exclusion_seq = sequence
-    elif filename.startswith("Inclusion_"):
+    elif os.path.basename(file).startswith("Inclusion_"):
+      print("Inclusion file was found")
       inclusion_seq = sequence
     else:
+      print("Error: Inclusion and/or Exclusion FASTA files were not found. Check manualy.")
       return None,None
   return inclusion_seq, exclusion_seq
 
