@@ -21,10 +21,12 @@ rank = user_args.rank
 aff = user_args.aff
 
 # DEBUG Arguments
-# in_dir = "/private10/Projects/Efi/AML/rMATS/Mock6h_Indisulam/"
-# output_dir = "/private10/Projects/Efi/AML/NeoEpitopesAnalyze/"
-# group1_name = "Mock_6h"
+# in_dir = "/private10/Projects/Efi/CRG/SF3B1_mut/SplicingAnalysis/_forNEanalysis/CLL/SplicingEvents/DMSO-WT_vs_H3B8800-WT/"
+# output_dir = "/private10/Projects/Efi/CRG/SF3B1_mut/SplicingAnalysis/_forNEanalysis/CLL/SplicingEvents/"
+# group1_name = "DMSO-K700E"
 # group2_name = "Indisulam"
+# rank = 0.5
+# aff = 50
 
 # list of HLA types
 HLA_types = ["HLA-A0101","HLA-A0201","HLA-A0301","HLA-A1101", "HLA-A2402","HLA-A2601","HLA-B0702","HLA-B0801","HLA-B1501","HLA-B2705","HLA-B3901","HLA-B4001","HLA-B5801"]
