@@ -6,7 +6,7 @@ library(ggpubr)
 library(gridExtra)
 
 # Output directory for plotting
-out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/AllSamplesOnly/6-Hours-Treatments/'
+out_dir <- '/private10/Projects/Efi/CRG/SF3B1_mut/SplicingAnalysis/_forNEanalysis/CLL/'
 
 # Define the control and treatments groups
 # "No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2"
@@ -14,16 +14,23 @@ out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvent
 #treatments_desired_order <- c("DMSO", "H3B8800")
 #treatments_desired_order <- c('DMSO','Indisulam', 'PladienolideB')
 #treatments_desired_order <- c('DMSO','dCEMM1','Indisulam', 'PladienolideB')
-treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam",'PladB', 'Madrasin','H3B-8800')
+#treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam",'PladB', 'Madrasin','H3B-8800')
 #treatments_desired_order <- c('Indisulam')
 #treatments_desired_order <- c("NoTreatmentSF","Mock18","5Aza","FB23-2")
 #treatments_desired_order <- c('NormalMock', 'NormalIndisulam','NormalPladB')#,'Mock6','Indisulam','PladB')
 #controls <- c("NoTreatmentSF","Mock18")
-controls <- c("NoTreatmentSF","Mock6")
+#controls <- c("NoTreatmentSF","Mock6")
 #controls <- c('Mock18')#, 'NormalIndisulam','NormalPladB')
+#treatments_desired_order <- c('DMSO', 'Indisulam','PladienolideB','dCEMM1')
+#controls <- c('DMSO')
+# treatments_desired_order <- c('DMSO-WT','DMSO-R625H','DMSO-K700E', 
+#                               'Indisulam-WT','Indisulam-R625H','Indisulam-K700E',
+#                               'PladienolideB-WT','PladienolideB-R625H','PladienolideB-K700E')
+# controls <- c('DMSO-WT','DMSO-R625H','DMSO-K700E')
+treatments_desired_order <- c('DMSO-WT','DMSO-K700E', 
+                              'H3B8800-WT','H3B8800-K700E')
+controls <- c('DMSO-WT','DMSO-K700E')
 
-treatments_desired_order <- c('DMSO', 'Indisulam','PladienolideB','dCEMM1')
-controls <- c('DMSO')
 
 # find the neoepitopes file and read it
 neo_epitopes_file = list.files(out_dir, pattern = 'NovelStrongBindingEpitopes_noDups.csv', full.names = TRUE)
@@ -94,7 +101,7 @@ rank_plot <- data_long %>%
   mutate(HLA = factor(HLA, levels = unique(HLA))) %>%
   ggplot(aes(x = HLA, y = count, fill = rank_category)) +
   geom_bar(stat = "identity", position = "stack") +
-  facet_wrap(~ Group, ncol = 2) +
+  facet_wrap(~ Group, ncol = 3) +
   labs(x = "HLA Allele", y = "Strong Binders", title = "%Rank Distribution") +
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
@@ -119,7 +126,7 @@ nM_plot <- data_long %>%
   mutate(HLA = factor(HLA, levels = unique(HLA))) %>%
   ggplot(aes(x = HLA, y = count, fill = nM_category)) +
   geom_bar(stat = "identity", position = "stack") +
-  facet_wrap(~ Group, ncol = 2) +
+  facet_wrap(~ Group, ncol = 3) +
   labs(x = "HLA Allele", y = "Strong Binders", title = "Affinity (nM) Distribution") +
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
