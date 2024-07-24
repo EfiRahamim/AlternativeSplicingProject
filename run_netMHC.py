@@ -20,8 +20,8 @@ def getPaths(input_dir):
         directories_pattern = os.path.join(input_dir,"*","*","*")
     directories = glob.glob(directories_pattern)
     pathes = [os.path.abspath(dir) for dir in directories if os.path.isdir(dir)] #and dir.find("sashimiplots") == -1]
-    if pathes is None:
-        print("Error in getting pathes of transcripts.")
+    if not pathes: # check if pathes exist
+        print("Error in getting pathes of transcripts. Maybe no transcripts exist?")
         sys.exit()
     return pathes
 
@@ -165,9 +165,6 @@ def get_dicts_from_exist_file(file_path):
 
 # run the analyze steps on the current transcript directory
 def runAnalyze(transcript_dir):
-    # assign lists as global so they can be modified within the function
-    #global list_of_dicts_group1, list_of_dicts_group2
-    #print(f"Analyzing transcript: {transcript_dir}")
     # get GeneSymbol and TranscriptID of current path
     if user_args.psi_sigma:
         as_type = transcript_dir.strip("/").split("/")[-2]
@@ -180,29 +177,16 @@ def runAnalyze(transcript_dir):
         return
     # create 'netMHC' results directory
     netMHC_dir = os.path.join(transcript_dir,f"netMHC_Rank{user_args.rank}")
-    # if os.path.isdir(netMHC_dir):
-    #     #print(f"Transcript {transcript_dir} was already checked. Results can be found at {netMHC_dir}.")
-    #     #return
-    #     for file in os.listdir(netMHC_dir):
-    #         if file.endswith(".csv"):
-    #             os.chdir(netMHC_dir)
-    #             group1_dict, group2_dict = get_dicts_from_exist_file(os.path.abspath(file))
-    #             #print(difference_dict)
-    #             os.chdir(user_args.input_dir)
-    #             if group1_dict is None or group2_dict is None:
-    #                 print(f"Could not find group1 and group2 dicts from exist directory {netMHC_dir}")
-    #                 return
-    #             return group1_dict, group2_dict
-    #             #list_of_dicts_group1.append(group1_dict)
-    #             #list_of_dicts_group2.append(group2_dict)
-    #             #print(list_of_dicts_group1, list_of_dicts_group2)
-    #             #return
+    # check if netMHC was already ran on this directory
+    if os.path.isdir(netMHC_dir):
+        exist_files = glob.glob(os.path.join(netMHC_dir, '*.xls'))
+        if len(exist_files) == 2:
+            print(f"NetMHC was already ran on {netMHC_dir}. Skipping.")
+            return
     if not os.path.isdir(netMHC_dir):
         os.mkdir(netMHC_dir)
     # Get all files in the directory
-    #files = os.listdir(transcript_dir)
     files = get_absolute_file_paths(transcript_dir)
-    #print(f"Files found in {transcript_dir}:{files}")
     # Search for group1 AA sequence fasta file
     if user_args.psi_sigma:
         group1Seq_file = next((os.path.abspath(file) for file in files if file.endswith(f'_{user_args.lable1}.fasta')), None)
@@ -228,25 +212,7 @@ def runAnalyze(transcript_dir):
     group2_dict = {"GeneSymbol": geneSymbol, "TranscriptID": transcriptID, "Group": user_args.lable2, "SplicingType":as_type, "Form": groups['2'], "Rank": user_args.rank}
     group2_dict.update(group2_seq_sb_dict)
 
-    # calculate the difference between SB in each HLA allele
-    # differences_dict = calculate_SB_difference(update_inclusion_dict, update_exclusion_dict)
-    # update_difference_dict = {"GeneSymbol": geneSymbol, "TranscriptID": transcriptID, "Group":user_args.lable2+"-"+user_args.lable1}
-    # update_difference_dict.update(differences_dict)
-    # save_results_to_csv([update_inclusion_dict, update_exclusion_dict,update_difference_dict], netMHC_dir, filename=geneSymbol+"_"+transcriptID+"_"+"StrongBinders.csv")
-    # return update_difference_dict
-    
-    # Without calculating the diffrences - just  save the HLA dict's of the groups in one csv file and return the dicts
-    save_results_to_csv([group1_dict, group2_dict], netMHC_dir, filename=geneSymbol+"_"+transcriptID+"_"+"StrongBinders.csv")
     return group1_dict, group2_dict
-    #list_of_dicts_group1.append(group1_dict)
-    #list_of_dicts_group2.append(group2_dict)
-    # if groups['inclusion'] == user_args.lable2:
-    #     return group1_dict
-    # elif groups['exclusion'] == user_args.lable2:
-    #     return group2_dict
-
-
-    #print( update_inclusion_dict,"\n",update_exclusion_dict,"\n",update_difference_dict)
 
 
 # global args
@@ -257,25 +223,9 @@ list_of_dicts = []
 if __name__ == '__main__':
     # get absolute paths of transcripts directories
     pathes = getPaths(user_args.input_dir)
-    #print(f"Directories that has been found in {user_args.input_dir}:\n{pathes}")
+    # run netMHC in parallel
     pool = multiprocessing.Pool(processes=10) 
-    #list_of_differences_dict = pool.map(runAnalyze, pathes)
-    #list_of_dicts_group1, list_of_dicts_group2 = pool.map(runAnalyze, pathes)
-    #pool.map(runAnalyze, pathes)
     results = pool.map(runAnalyze, pathes)
     pool.close()
     pool.join()
-    #print(results)
-    for group1_dict, group2_dict in results:
-        #list_of_dicts_group1.append(group1_dict)
-        #list_of_dicts_group2.append(group2_dict)
-        list_of_dicts.append(group1_dict)
-        list_of_dicts.append(group2_dict)
-    #print(list_of_dicts_group1)
-    #print(list_of_dicts_group2)
-    #print(list_of_dicts_group1, list_of_dicts_group2)
-    #print("list of dicts: ", list_of_differences_dict)
-    #save_results_to_csv(list_of_dicts_group1, user_args.input_dir, filename=f"{user_args.lable1}_StrongBinders_All.csv")
-    #save_results_to_csv(list_of_dicts_group2, user_args.input_dir, filename=f"{user_args.lable2}_StrongBinders_All.csv")
-    save_results_to_csv(list_of_dicts,user_args.input_dir, filename=f"netMHC_rank{user_args.rank}_StrongBinders_All.csv")
     print("Done proccessing netMHC on samples.")
