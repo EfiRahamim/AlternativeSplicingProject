@@ -192,6 +192,9 @@ def runAnalyze(transcript_dir):
         group1Seq_file = next((os.path.abspath(file) for file in files if file.endswith(f'_{user_args.lable1}.fasta')), None)
     else:
         group1Seq_file = next((os.path.abspath(file) for file in files if file.endswith('.fasta') and f'AA_{user_args.lable1}' in file), None)
+    if group1Seq_file is None:
+        print(f"Error in locating {user_args.lable1} fasta file in {transcript_dir}. Skipping.")
+        return
     groups=getGroupsForms(group1Seq_file) # define the forms (inclusion/exclusion) of the groups (lable1/lable2) 
     if groups is None:
         print(f"Error in define forms of groups in {transcript_dir}. Skipping.")
