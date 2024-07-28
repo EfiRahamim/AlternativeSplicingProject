@@ -6,7 +6,7 @@ library(ggpubr)
 library(gridExtra)
 
 # Output directory for plotting
-out_dir <- '/private10/Projects/Efi/CRG/SF3B1_mut/SplicingAnalysis/_forNEanalysis/CLL/'
+out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/AllSamplesOnly/18-Hours-Treatments/'
 
 # Define the control and treatments groups
 # "No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2"
@@ -16,9 +16,9 @@ out_dir <- '/private10/Projects/Efi/CRG/SF3B1_mut/SplicingAnalysis/_forNEanalysi
 #treatments_desired_order <- c('DMSO','dCEMM1','Indisulam', 'PladienolideB')
 #treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam",'PladB', 'Madrasin','H3B-8800')
 #treatments_desired_order <- c('Indisulam')
-#treatments_desired_order <- c("NoTreatmentSF","Mock18","5Aza","FB23-2")
+treatments_desired_order <- c("NoTreatmentSF","Mock18","5Aza","FB23-2")
 #treatments_desired_order <- c('NormalMock', 'NormalIndisulam','NormalPladB')#,'Mock6','Indisulam','PladB')
-#controls <- c("NoTreatmentSF","Mock18")
+controls <- c("NoTreatmentSF","Mock18")
 #controls <- c("NoTreatmentSF","Mock6")
 #controls <- c('Mock18')#, 'NormalIndisulam','NormalPladB')
 #treatments_desired_order <- c('DMSO', 'Indisulam','PladienolideB','dCEMM1')
@@ -50,19 +50,35 @@ data_long$FixedTranscript <- gsub('Ex.|TSS.','',data_long$Reference.Transcript)
 
 # 1. Plot count of each treatment in each HLA type, divided by Splicing Event
 HLA_treatment_AStype <- data_long %>%
-  group_by(Group, HLA, Splicing.Event) %>%
+  #group_by(Group, HLA, Splicing.Event) %>%
+  mutate(Splicing.Event = ifelse(Splicing.Event == 'IR_OLR', 'IR',
+                                 ifelse(Splicing.Event == 'TSS_A5SS', 'A5SS',
+                                        ifelse(Splicing.Event == 'TSS_A3SS', 'A3SS', Splicing.Event)))) %>%
+  group_by(Peptide, Group, Splicing.Event) %>%
   summarise(count = n()) %>%
-  ggplot(aes(x = Group, y = count, fill = Splicing.Event)) +
-  geom_bar(stat = "identity", position = "stack") +
-  facet_wrap(~HLA, ncol = 3) +
-  theme_bw()+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
-  labs(title = "Novel Neo-Epitopes From Treatments", y = "Novel Neo-Epitopes Count")
+  #ggplot(aes(x = Group, y = count, fill = Splicing.Event)) +
+  #geom_bar(stat = "identity", position = "dodge") +
+  #facet_wrap(~HLA, ncol = 3) +
+  #theme_bw()+
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  #labs(title = "Novel Neo-Epitopes From Splicing Events", y = "Novel Neo-Epitopes Count")
   #theme_minimal()
+  ggplot(aes(x=Group, fill=Splicing.Event))+
+  geom_bar(position="fill")+
+  #scale_fill_brewer(palette = "Paired")+
+  labs(title='Novel Neo-Epitopes Divided by Splicing Events',
+       subtitle = 'Thresholds: %Rank < 0.5, Affinity (nM) < 50',
+       fill = 'Splicing Event',
+       y='Propotion')+
+  geom_text(aes(label=paste0(signif(..count.. / tapply(..count.., ..x.., sum)[as.character(..x..)], digits=3)*100,'%')),
+    stat="count",
+    position=position_fill(vjust=0.5),
+    size=3)
+
 print(HLA_treatment_AStype)
 ggsave(HLA_treatment_AStype, 
        path = out_dir, 
-       filename = "NovelNEinTreatments.png",
+       filename = "NovelNEBySplicingEvents.png",
        bg=NULL, width = 10, height = 6, dpi = 300)
 
 # 2. Plot count of each HLA type in each group
@@ -101,7 +117,7 @@ rank_plot <- data_long %>%
   mutate(HLA = factor(HLA, levels = unique(HLA))) %>%
   ggplot(aes(x = HLA, y = count, fill = rank_category)) +
   geom_bar(stat = "identity", position = "stack") +
-  facet_wrap(~ Group, ncol = 3) +
+  facet_wrap(~ Group, ncol = 2) +
   labs(x = "HLA Allele", y = "Strong Binders", title = "%Rank Distribution") +
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
@@ -126,7 +142,7 @@ nM_plot <- data_long %>%
   mutate(HLA = factor(HLA, levels = unique(HLA))) %>%
   ggplot(aes(x = HLA, y = count, fill = nM_category)) +
   geom_bar(stat = "identity", position = "stack") +
-  facet_wrap(~ Group, ncol = 3) +
+  facet_wrap(~ Group, ncol = 2) +
   labs(x = "HLA Allele", y = "Strong Binders", title = "Affinity (nM) Distribution") +
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
@@ -155,9 +171,14 @@ upset_plot <- upset(df_reshaped[,-1],
                     sets=names(df_reshaped)[-1],
                     main.bar.color = "#4e79a7",
                     order.by = "freq",
-                    empty.intersections = "on")
+                    empty.intersections = "on",
+                    set_size.show=T)
+                    #set_size.angles=45,
+                    #set_size.numbers_size=8)
+#plot_grob <- grid.grab(wrap.grobs = TRUE)
+#ggsave(filename=paste0(out_dir,"/UpSetPlot_AllTreatments.png"), plot = plot_grob, width = 15, height = 10, dpi = 300)
 # save the upset plot
-pdf(file=paste0(out_dir,"/UpSetPlot_AllTreatments.pdf"), onefile=FALSE) # or other device
+pdf(file=paste0(out_dir,"/UpSetPlot_AllTreatments.pdf"), onefile=FALSE,width=12, height=10) # or other device
 upset_plot
 dev.off()
 
@@ -200,9 +221,10 @@ annotated_plot <- data_long %>%
        fill = 'Splice Junction Type',
        y='Propotion')+
   geom_text(
-    aes(label=signif(..count.. / tapply(..count.., ..x.., sum)[as.character(..x..)], digits=3)),
+    aes(label=paste0(signif(..count.. / tapply(..count.., ..x.., sum)[as.character(..x..)], digits=3)*100,'%')),
     stat="count",
-    position=position_fill(vjust=0.5))
+    position=position_fill(vjust=0.5),
+    size=4)
   #geom_text(stat = "count", aes(label = after_stat(count)), position=position_stack(0.5))
 annotated_plot
 ggsave(annotated_plot, 
