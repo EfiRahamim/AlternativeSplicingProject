@@ -6,12 +6,12 @@ library(ggpubr)
 library(gridExtra)
 
 # Output directory for plotting
-out_dir <- '/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/AllSamplesOnly/18-Hours-Treatments/'
+out_dir <- '/private10/Projects/Efi/CRG/GBM/SplicingAnalysis/SplicingEvents/_forNEanalysis/DMSO_vs_H3B8800/'
 
 # Define the control and treatments groups
 # "No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2"
 # "NoTreatmentNoSF","NoTreatmentSF","Mock6","Indisulam","PladB","Mock18","5Aza","FB23-2")
-#treatments_desired_order <- c("DMSO", "H3B8800")
+treatments_desired_order <- c("DMSO", "H3B8800")
 #treatments_desired_order <- c('DMSO','Indisulam', 'PladienolideB')
 #treatments_desired_order <- c('DMSO','dCEMM1','Indisulam', 'PladienolideB')
 #treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam",'PladB', 'Madrasin','H3B-8800')
@@ -22,7 +22,7 @@ controls <- c("NoTreatmentSF","Mock18")
 #controls <- c("NoTreatmentSF","Mock6")
 #controls <- c('Mock18')#, 'NormalIndisulam','NormalPladB')
 #treatments_desired_order <- c('DMSO', 'Indisulam','PladienolideB','dCEMM1')
-#controls <- c('DMSO')
+controls <- c('DMSO')
 # treatments_desired_order <- c('DMSO-WT','DMSO-R625H','DMSO-K700E', 
 #                               'Indisulam-WT','Indisulam-R625H','Indisulam-K700E',
 #                               'PladienolideB-WT','PladienolideB-R625H','PladienolideB-K700E')
@@ -187,7 +187,7 @@ dev.off()
 candidate_peptides <- data_long %>%
   rowwise()%>%
   mutate(Gene=strsplit(ID,"_")[[1]][1])%>%
-  group_by(Peptide, Gene, Splicing.Event, Annotated)%>%#, Exon.Type) %>%
+  group_by(Peptide, Gene, Splicing.Event, Target.Exon, Exon.Type,Annotated)%>%#, Exon.Type) %>%
   summarize(Group_Count = n_distinct(Group),
             Groups = paste(unique(Group), collapse = ", "),
             HLA_Count = n_distinct(HLA),
