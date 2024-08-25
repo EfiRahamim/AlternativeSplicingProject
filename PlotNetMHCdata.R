@@ -6,38 +6,24 @@ library(ggpubr)
 library(gridExtra)
 
 # Output directory for plotting
-out_dir <- '/private10/Projects/Efi/CRG/GBM/SplicingAnalysis/SplicingEvents/_forNEanalysis/DMSO_vs_H3B8800/'
+out_dir <- "/private10/Projects/Efi/AML/SplicingAnalysis_March2024/SplicingEvents/_forNEanalysis/PerPatient/IDMO1343/"
 
 # Define the control and treatments groups
-# "No Treatment", "Mock (6h)", "Indisulam", "Pladienolide-B", "Mock (18h)", "5-Azacytidine", "FB23-2"
-# "NoTreatmentNoSF","NoTreatmentSF","Mock6","Indisulam","PladB","Mock18","5Aza","FB23-2")
-treatments_desired_order <- c("DMSO", "H3B8800")
-#treatments_desired_order <- c('DMSO','Indisulam', 'PladienolideB')
-#treatments_desired_order <- c('DMSO','dCEMM1','Indisulam', 'PladienolideB')
-#treatments_desired_order <- c("NoTreatmentSF","Mock6","Indisulam",'PladB', 'Madrasin','H3B-8800')
-#treatments_desired_order <- c('Indisulam')
-treatments_desired_order <- c("NoTreatmentSF","Mock18","5Aza","FB23-2")
-#treatments_desired_order <- c('NormalMock', 'NormalIndisulam','NormalPladB')#,'Mock6','Indisulam','PladB')
-controls <- c("NoTreatmentSF","Mock18")
-#controls <- c("NoTreatmentSF","Mock6")
-#controls <- c('Mock18')#, 'NormalIndisulam','NormalPladB')
-#treatments_desired_order <- c('DMSO', 'Indisulam','PladienolideB','dCEMM1')
-controls <- c('DMSO')
-# treatments_desired_order <- c('DMSO-WT','DMSO-R625H','DMSO-K700E', 
-#                               'Indisulam-WT','Indisulam-R625H','Indisulam-K700E',
-#                               'PladienolideB-WT','PladienolideB-R625H','PladienolideB-K700E')
-# controls <- c('DMSO-WT','DMSO-R625H','DMSO-K700E')
-treatments_desired_order <- c('DMSO-WT','DMSO-K700E', 
-                              'H3B8800-WT','H3B8800-K700E')
-controls <- c('DMSO-WT','DMSO-K700E')
+treatments_desired_order <- c("Mock6","Indisulam", "Madrasin", "H3B-8800")
+controls <- c("Mock6")
+treatments_desired_order <- c("Mock6","Indisulam")
 
+treatments_desired_order <- c("Mock18","5Aza")
+controls <- c("Mock18")
+
+treatments_desired_order <- c("NoTreatmentSF","Mock18","FB23-2", "5Aza")
+controls <- c("NoTreatmentSF","Mock18")
 
 # find the neoepitopes file and read it
 neo_epitopes_file = list.files(out_dir, pattern = 'NovelStrongBindingEpitopes_noDups.csv', full.names = TRUE)
 data_long <- read.csv(neo_epitopes_file)
 # treat groups names as factor
 data_long$Group <- factor(data_long$Group, levels = treatments_desired_order)
-
 # filter out peptides of control groups
 data_long <- filter(data_long, !(Group %in% controls))
 
@@ -92,7 +78,7 @@ Treatment_HLA <- data_long %>%
   mutate(HLA = factor(HLA, levels = unique(HLA))) %>% 
   ggplot(aes(x = HLA, y = count, fill = HLA)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~Group, ncol = 2) +
+  facet_wrap(~Group, ncol = 3) +
   labs(title = "Novel Neo-Epitopes Distribution over HLA alleles", y = "Novel Neo-Epitopes Count")+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
   scale_fill_manual(values = group_colors)
@@ -117,7 +103,7 @@ rank_plot <- data_long %>%
   mutate(HLA = factor(HLA, levels = unique(HLA))) %>%
   ggplot(aes(x = HLA, y = count, fill = rank_category)) +
   geom_bar(stat = "identity", position = "stack") +
-  facet_wrap(~ Group, ncol = 2) +
+  facet_wrap(~ Group, ncol = 3) +
   labs(x = "HLA Allele", y = "Strong Binders", title = "%Rank Distribution") +
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
@@ -142,7 +128,7 @@ nM_plot <- data_long %>%
   mutate(HLA = factor(HLA, levels = unique(HLA))) %>%
   ggplot(aes(x = HLA, y = count, fill = nM_category)) +
   geom_bar(stat = "identity", position = "stack") +
-  facet_wrap(~ Group, ncol = 2) +
+  facet_wrap(~ Group, ncol = 3) +
   labs(x = "HLA Allele", y = "Strong Binders", title = "Affinity (nM) Distribution") +
   theme_bw()+
   theme(axis.text.x = element_text(angle = 45, hjust = 1))+
@@ -153,41 +139,42 @@ ggsave(nM_plot,
        filename = "Affinity_nM_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
 
 # plot UpSet plot
-library(UpSetR)
-# Count the number of occurrences of each peptide in each group
-df_counts <- data_long %>%
-  group_by(Group, Peptide) %>%
-  summarise(count = as.integer(n() > 0)) %>%
-  ungroup()
-
-# Reshape the data frame to have groups as columns and counts as values
-df_reshaped <- df_counts %>%
-  pivot_wider(names_from = Group, values_from = count, values_fill = 0)
-
-df_reshaped <- as.data.frame(df_reshaped)
-
-#str(df_reshaped)
-upset_plot <- upset(df_reshaped[,-1], 
-                    sets=names(df_reshaped)[-1],
-                    main.bar.color = "#4e79a7",
-                    order.by = "freq",
-                    empty.intersections = "on",
-                    set_size.show=T)
-                    #set_size.angles=45,
-                    #set_size.numbers_size=8)
-#plot_grob <- grid.grab(wrap.grobs = TRUE)
-#ggsave(filename=paste0(out_dir,"/UpSetPlot_AllTreatments.png"), plot = plot_grob, width = 15, height = 10, dpi = 300)
-# save the upset plot
-pdf(file=paste0(out_dir,"/UpSetPlot_AllTreatments.pdf"), onefile=FALSE,width=12, height=10) # or other device
-upset_plot
-dev.off()
+if (length(setdiff(treatments_desired_order, controls)) > 1){
+  library(UpSetR)
+  # Count the number of occurrences of each peptide in each group
+  df_counts <- data_long %>%
+    group_by(Group, Peptide) %>%
+    summarise(count = as.integer(n() > 0)) %>%
+    ungroup()
+  # Reshape the data frame to have groups as columns and counts as values
+  df_reshaped <- df_counts %>%
+    pivot_wider(names_from = Group, values_from = count, values_fill = 0)
+  df_reshaped <- as.data.frame(df_reshaped)
+  upset_plot <- upset(df_reshaped[,-1], 
+                      sets=names(df_reshaped)[-1],
+                      main.bar.color = "#4e79a7",
+                      order.by = "freq",
+                      empty.intersections = "on",
+                      set_size.show=T)
+                      #set_size.angles=45,
+                      #set_size.numbers_size=8)
+  pdf(file=paste0(out_dir,"/UpSetPlot_AllTreatments.pdf"), onefile=FALSE,width=12, height=10) # or other device
+  upset_plot
+  dev.off()
+}
 
 # check for peptides that appear in many groups and many HLA allels
 # Count the number of unique groups and HLA's for each peptide 
 candidate_peptides <- data_long %>%
   rowwise()%>%
   mutate(Gene=strsplit(ID,"_")[[1]][1])%>%
-  group_by(Peptide, Gene, Splicing.Event, Target.Exon, Exon.Type,Annotated)%>%#, Exon.Type) %>%
+  
+  
+  #### CHECK!!#####
+  #group_by(Peptide, Gene, Splicing.Event,Exon.Type,Annotated)%>%
+  group_by(Peptide, Gene, Splicing.Event, Target.Exon, Exon.Type,Annotated)%>%
+  #### CHECK!!#####
+  
   summarize(Group_Count = n_distinct(Group),
             Groups = paste(unique(Group), collapse = ", "),
             HLA_Count = n_distinct(HLA),
@@ -230,65 +217,3 @@ annotated_plot
 ggsave(annotated_plot, 
        path = out_dir, 
        filename = "AnnotatedNeoEpitopesCounts_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
-
-comparisons <- combn(setdiff(treatments_desired_order, controls), 2,simplify = FALSE)
-# compare nM and Rank in each treatment
-p_rank <- ggplot(data_long, aes(x=Group, y=Rank, fill=Group))+
-  geom_boxplot()+
-  theme_bw()+
-  theme(legend.position = "none")+
-  labs(title = "Affinity Comparison - %Rank")+
-  stat_compare_means(method="t.test", comparisons = comparisons, label = 'p.signif')
-p_rank
-p_nM <-ggplot(data_long, aes(x=Group, y=nM, fill=Group))+
-  geom_boxplot()+
-  theme_bw()+
-  labs(title = "Affinity Comparison - nM")+
-  stat_compare_means(method="t.test", comparisons = comparisons, label = 'p.signif')
-p_nM
-g<-grid.arrange(p_rank, p_nM, ncol=2)
-ggsave(g, 
-       path = out_dir, 
-       filename = "Rank_nM_compare_plot.png",bg=NULL, width = 10, height = 6, dpi = 300)
-
-
-### create plots of Rank and nM comparisons
-summary_data <- data_long %>%
-  group_by(Group) %>%
-  summarize(Rank_mean=mean(Rank),
-            Rank_std = sd(Rank),
-            Rank_se=sd(Rank) / sqrt(length(Rank)),
-            nM_mean=mean(nM),
-            nM_std = sd(nM),
-            nM_se=sd(nM) / sqrt(length(nM)))
-# calc p-values for Rank
-Rank_p_test <- data_long %>% 
-  compare_means(Rank~Group, data=.)
-Rank_p_test$label <- paste(Rank_p_test$group1,"-", Rank_p_test$group2,":",Rank_p_test$p.signif,"(",Rank_p_test$method,")")
-sign_label <- paste(Rank_p_test$label, collapse = '\n')
-# compare Rank between groups
-rank_plot <- ggplot(summary_data) +
-  geom_bar( aes(x=Group, y=Rank_mean), stat="identity", fill="skyblue", alpha=0.7) +
-  geom_errorbar( aes(x=Group, ymin=Rank_mean-Rank_std, ymax=Rank_mean+Rank_std), width=0.4, colour="orange", alpha=0.9, size=1.3) +
-  geom_text(aes(x = max(as.numeric(Group)), y = max(Rank_mean+Rank_std)+0.1), label = sign_label, hjust = 1, vjust = 1) +
-  #geom_text(aes(x = mean(as.numeric(Group)), y = max(Rank_mean+Rank_std)), label = sign_label, hjust = 1, vjust = 1) +
-  labs(title = 'Error Bars of Rank')
-  
-# calc p-values for nM
-nM_p_test <- data_long %>% 
-  compare_means(nM~Group, data=.)
-nM_p_test$label <- paste(nM_p_test$group1,"-", nM_p_test$group2,":",nM_p_test$p.signif,"(",nM_p_test$method,")")
-sign_label <- paste(nM_p_test$label, collapse = '\n')
-nM_plot <- ggplot(summary_data) +
-  geom_bar( aes(x=Group, y=nM_mean), stat="identity", fill="skyblue", alpha=0.7) +
-  geom_errorbar( aes(x=Group, ymin=nM_mean-nM_std, ymax=nM_mean+nM_std), width=0.4, colour="orange", alpha=0.9, size=1.3) +
-  geom_text(aes(x = max(as.numeric(Group)), y = max(nM_mean+nM_std)+10), label = sign_label, hjust = 1, vjust = 1) +
-  #geom_text(aes(x = mean(as.numeric(Group)), y = max(nM_mean+nM_std)+10), label = sign_label, hjust = 1, vjust = 1) +
-  labs(title = 'Error Bars of Affinity (nM)')
-
-g <- grid.arrange(rank_plot, nM_plot, ncol=2)
-ggsave(g, 
-       path = out_dir, 
-       filename = "RankAffinityMeansCompare_plot_STD.png",bg=NULL, width = 10, height = 6, dpi = 300)
-
-
