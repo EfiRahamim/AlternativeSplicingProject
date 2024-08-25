@@ -8,7 +8,7 @@ parser$add_argument("-file_name", action="store", dest="output_file_name", help=
 parser$add_argument("-psi", action="store", dest="delta_PSI", help="ΔPSI (in precentages) for filtering. default: 20.", type="integer", default=20)
 parser$add_argument("-pval", action="store", dest="p_value", help="P-value for filtering. default: 0.05", type="double", default=0.05)
 parser$add_argument("-fdr", action="store", dest="fdr", help="FDR for filtering. default: 0.05", type="double", default=0.05)
-parser$add_argument("-ss", action="store", dest="ss", help="Required precentage of supporting samples for each splicing event. default: 0.5", type="double", default=0.5)
+parser$add_argument("-ss", action="store", dest="ss", help="Required precentage of supporting samples for each splicing event. default: 1", type="double", default=1)
 parser$add_argument("--novelSS", action="store_true", dest="novelSS", help="PSI-Sigma results include novel transcripts. Plot will be generated for results with and without novel transcripts.")
 parser$add_argument("-gene_prefix", action="store", dest="gene_prefix", help="Prefix of novel genes. default: MSTRG", default="MSTRG")
 parser$add_argument("-ncol", action="store", dest="ncol", help="Number of columns to plot in the volcano plots. default: 3", type="integer", default=3)
@@ -204,6 +204,7 @@ volcano_plot <- ggplot(merged_results, aes(x = ΔPSI...., y = -log10(T.test.p.va
   geom_point(aes(color = ifelse(ΔPSI.... >= delta_PSI & T.test.p.value < p_value, "Inclusion",
                                  ifelse(ΔPSI.... <= -delta_PSI & T.test.p.value < p_value, "Exclusion", "Not Significant")))) +
   facet_wrap(~Comparison, ncol = ncol_plot) + 
+  theme(legend.position = 'bottom')+
   labs(x = "ΔPSI", y = "-log10(P-Value)", subtitle = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value)) +
   #ggtitle(paste("ΔPSI:", comparison)) +
   ggtitle("Volcano plots of differential splicing events.") +
@@ -217,23 +218,31 @@ ggsave(filename="VolcanoPlots.png", plot = volcano_plot, path=output_dir, width 
 
 # create bar plots of the significant splicing events
 if (length(filtered_df_list) == 1 ){
+  merged_results_filtered$Event.Type <- ifelse(merged_results_filtered$Event.Type == 'TSS|A3SS', 'A3SS',
+                                               ifelse(merged_results_filtered$Event.Type == 'TSS|A5SS', 'A5SS',
+                                                      ifelse(merged_results_filtered$Event.Type == 'IR (overlapping region)', 'IR', merged_results_filtered$Event.Type)))
   ordered_event_types <- names(sort(table(merged_results_filtered$Event.Type), decreasing = TRUE))
   merged_results_filtered$Event.Type <- factor(merged_results_filtered$Event.Type, levels = ordered_event_types)
   filtered_splicing_event_barplot <- ggplot(merged_results_filtered, aes(x=Event.Type,fill=Event.Type))+
     geom_bar(position = "stack")+
     geom_text(stat = "count", aes(label = after_stat(count)), position=position_stack(0.5)) +
-    #theme_minimal()+
+    theme_bw()+
+    theme(legend.position='bottom')+
     labs(title = "PSI-Sigma results: Differential Splicing Events",
          subtitle = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value), y = "Count")
   filtered_splicing_event_barplot
   ggsave(filename="SignificantSplicingEvents.png", plot = filtered_splicing_event_barplot, path=output_dir, width = 10, height = 6, dpi = 300)
   
 } else {
+  merged_results_filtered$Event.Type <- ifelse(merged_results_filtered$Event.Type == 'TSS|A3SS', 'A3SS',
+                                               ifelse(merged_results_filtered$Event.Type == 'TSS|A5SS', 'A5SS',
+                                                      ifelse(merged_results_filtered$Event.Type == 'IR (overlapping region)', 'IR', merged_results_filtered$Event.Type)))
   merged_results_filtered$Comparison <- factor(merged_results_filtered$Comparison, levels = comparisons) # reorder the comparisons lables
   filtered_splicing_event_barplot <- ggplot(merged_results_filtered, aes(y=Comparison, fill=Event.Type))+
     geom_bar(position = "stack")+
-    geom_text(stat = "count", aes(label = after_stat(count)), position=position_stack(0.5)) +
-    #theme_minimal()+
+    geom_text(stat = "count", aes(label = after_stat(count)), position=position_stack(0.5), size=3) +
+    theme_bw()+
+    theme(legend.position='bottom')+
     labs(title = "PSI-Sigma results: Differential Splicing Events",
          subtitle = paste0("Thresholds: |ΔPSI| > ",delta_PSI ,"%, ", "P-Value < ",p_value), y = "Count")
   filtered_splicing_event_barplot
