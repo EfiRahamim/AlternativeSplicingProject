@@ -96,13 +96,18 @@ def calculate_SB_difference(sb_dict_1, sb_dict_2):
 
 # run the netMHC command
 def run_netmhc(fasta_file, netMHC_dir, form, group):
+    # get the pwd
+    pwd = os.getcwd()
+    # chdir to netMHC dir
+    os.chdir(netMHC_dir)
     # create file name for netMHC output
     if form.lower() == "exclusion":
         output_file = f"netMHC_exclusionAA_{group}.xls"
     elif form.lower() == "inclusion":
         output_file = f"netMHC_inclusionAA_{group}.xls"
     # create output file path
-    output_path = os.path.join(netMHC_dir,output_file)
+    #output_path = os.path.join(netMHC_dir,output_file)
+    output_path = os.path.join('./',output_file)
     # create shell command for netMHC
     command =["/private/common/Software/netMHC/netMHC-4.0/Linux_x86_64/bin/netMHC",
               "-hlalist", "/private/common/Software/netMHC/netMHC-4.0/data/allelelist",
@@ -126,6 +131,8 @@ def run_netmhc(fasta_file, netMHC_dir, form, group):
         print("Error in running netMHC on subprocess. Exit.")
         print(e.returncode)
         print(e.output)
+    # return to cwd
+    os.chdir(pwd)
     # save the log of the proccess
     netMHC_log = os.path.join(netMHC_dir, "netMHC_Log.txt")
     with open (netMHC_log, 'w') as netMHClog:
