@@ -6,8 +6,8 @@ import pandas as pd
 # CLI arguments
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="Running DeepTMHMM on full & spliced sequences of each transcript. Results will be saved in the directory of each transcript from the giving output directory.")
 parser.add_argument("-i", action='store', dest='input_dir', required=True, help="Input directory of genes directories")
-parser.add_argument("-l1", action='store', dest='lable1', required=True, help="Lable of first group (same order as in the rMATS analysis)")
-parser.add_argument("-l2", action='store', dest='lable2', required=True, help="Lable of second group (same order as in the rMATS analysis)")
+parser.add_argument("-l1", action='store', dest='lable1', required=True, help="Lable of first group (same order as in the splicing analysis)")
+parser.add_argument("-l2", action='store', dest='lable2', required=True, help="Lable of second group (same order as in the splicing analysis)")
 parser.add_argument('--PSIsigma', action='store_true', dest='psi_sigma', help='Set for PSI-Sigma tool results.')
 user_args = parser.parse_args()
 
@@ -169,7 +169,7 @@ def runAnalyze(event_dir):
         print(f"Error in define types of {event_dir}. Skipping.")
         return
     # load DeepTMHMM tool
-    deeptmhmm = biolib.load('DTU/DeepTMHMM')
+    deeptmhmm = biolib.load('DTU/DeepTMHMM:1.0.24')
     # run deepTMHMM on inclusion sequence
     tmhmm_inclusionSeq_path = run_DeepTMHMM(deeptmhmm,inclusionSeq_file,tmhmm_dir,type[0], spliced=False)
     # check if inclusion transcript has TM domain
@@ -205,7 +205,7 @@ if __name__ == '__main__':
     # get absolute paths of transcripts directories
     pathes = getPaths(user_args.input_dir)
     print(f"Directories that has been found in {user_args.input_dir}:\n{pathes}")
-    pool = multiprocessing.Pool(processes=2) # deepTMHMM is very costly. Not recommanded to run in parallel
+    pool = multiprocessing.Pool(processes=1) # deepTMHMM is very costly. Not recommanded to run in parallel
     pool.map(runAnalyze, pathes)
     pool.close()
     pool.join()
